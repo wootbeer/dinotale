@@ -83,3 +83,4 @@ dist/
 /build-syms/
 
 __pycache__/
+build-syms/

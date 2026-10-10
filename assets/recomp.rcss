@@ -1,0 +1,14 @@
+/* Bootstrap placeholder: recompui::init_styling (lib/RecompFrontend/recompui/src/core/ui_context.cpp)
+ * hard-requires this file to exist and to parse as a *non-empty* stylesheet -- if it's missing,
+ * std::ifstream opens in a failed state, tellg() returns -1 on that failed stream, and resize()
+ * receives that -1 implicitly converted to a huge size_t, throwing std::length_error (see
+ * STATUS.md round 35). A comment-only or truly empty file isn't enough either: RmlUi's
+ * StyleSheetParser::Parse (lib/RecompFrontend/recompui/lib/RmlUi/Source/Core/StyleSheetParser.cpp)
+ * returns false when it never encountered a real rule block, and init_styling dereferences the
+ * resulting null StyleSheetContainer* without checking it, crashing with an access violation
+ * (see STATUS.md round 36). The trivial rule below exists purely to give the parser something to
+ * successfully close into a non-empty stylesheet -- it is not this game's real UI styling, which
+ * doesn't exist yet (no assets extracted from the ROM).
+ */
+body {
+}

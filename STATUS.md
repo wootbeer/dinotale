@@ -6,6 +6,52 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 2: runtime project, overlay registration, audio microcode
+
+**Runtime project.** CMake, frontend (`src/main/`) and crash reporting
+adapted from the BattleTanx port, built against the same pinned
+N64ModernRuntime/RecompFrontend/RT64. ROM registration: XXH3-64
+`0xf1d8a6737dda5b82` of the `.z64`, entry point 0x80000400, 4 Kbit EEPROM
+saves (the game's `eepmgr`). The game asks for the ROM on first launch, as
+the BattleTanx port does.
+
+**Overlay registration.** A `[[patches.hook]]` at the top of `Overlay_Load`
+(0x8008169C) calls librecomp's `unload_overlays(ram, vramEnd - vramStart)`
+then `load_overlays(vromStart, ram, vromEnd - vromStart)`, with `ram` being
+the fifth argument (on the stack at sp+0x10). That sets the section's load
+address, which the generated `RELOC_HI16/LO16` code uses, and maps each
+overlay function's runtime address for indirect calls. `Overlay_Load` is the
+only loader (its only caller is `Overlay_AllocateAndLoad`, whose only caller
+is `func_80050A50`).
+
+**UI pump.** recompui's per-frame callback pump (`recomp_run_ui_callbacks`)
+is a hook just before the game's only `osViSwapBuffer` call (0x80071A18, in
+the framebuffer swap loop `func_80071974`). The BattleTanx port used a MIPS
+patch library for this, which needs a MIPS-capable clang (WSL on Windows);
+a hook needs no extra toolchain. The hook saves and restores a0-a2 around
+the pump. `patches/` keeps only the headers recompui includes.
+
+**Loads into $zero.** Four `lw $zero, off(reg)` instructions (in
+`func_80071FF0` and `func_8007C1A0`) come out of N64Recomp as `0 = MEM_W(...)`,
+which doesn't compile. Their result is discarded, so they're patched to nops.
+
+**Graphics microcode.** The ROM has F3DEX.NoN 1.23 and S2DEX 1.06 (their
+version strings are at ROM 0xB4730 and 0xB41F9). RT64 emulates both itself.
+
+**Audio microcode.** RSP code sits at the start of main's data, from ROM
+0x92170: rspboot (0xD0 bytes), then the graphics microcode text, then the
+audio text at ROM 0x94E60 (`D_80094260`, which the game DMAs with size
+0x1000; the text proper is 0xF50 bytes, up to the next symbol). Its
+command jump table is the 24 IMEM addresses at ROM 0xB4C90, the start of
+the data block the decomp splits at 0xB4C80; those are RSPRecomp's extra
+branch targets. It runs from IMEM 0x1000, not the usual 0x1080: at 0x1080
+its jumps (`j 0x1054`, `jal 0x10C0`) land below its own start or in the
+middle of a loop, while at 0x1000 they are the command fetch loop and the
+DMA wait routine. `aspMain.us.toml` recompiles it to `rsp/aspMain.cpp`.
+
+**App icon.** The project's chosen design, a white egg with three green
+spots, drawn from shapes by `tools/make_app_icon.py`.
+
 ## Round 1: ROM layout, overlays, symbol file, first N64Recomp run
 
 **ROM.** Yoshi's Story (USA) (En,Ja), SHA-1 of the `.z64`

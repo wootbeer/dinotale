@@ -1,0 +1,16 @@
+# RSPRecomp config for the game's audio microcode (STATUS.md round 2).
+# The text is main's D_80094260 (ROM 0x94E60, 0xF50 bytes, the size the game
+# DMAs it with); the extra branch targets are the command jump table at the
+# start of its data (ROM 0xB4C90). It runs from IMEM 0x1000, not libultra's
+# usual 0x1080: only then do its own jumps (to 0x1054, 0x10C0) land on its
+# command loop.
+text_offset = 0x94E60
+text_size = 0xF50
+text_address = 0x04001000
+rom_file_path = "yoshisstory.us.z64"
+output_file_path = "rsp/aspMain.cpp"
+output_function_name = "aspMain"
+extra_indirect_branch_targets = [
+    0x1F08, 0x122C, 0x1148, 0x1EB8, 0x1DCC, 0x14F0, 0x1E3C, 0x1C7C, 0x1178, 0x17C8, 0x11E4, 0x1A70,
+    0x1B00, 0x118C, 0x1C28, 0x121C, 0x1780, 0x182C, 0x19EC, 0x1880, 0x1A50, 0x1A60, 0x1A14, 0x1B6C,
+]

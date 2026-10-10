@@ -1,0 +1,64 @@
+diff --git a/src/common/rt64_math.cpp b/src/common/rt64_math.cpp
+index c20fb51..57f9b09 100644
+--- a/src/common/rt64_math.cpp
++++ b/src/common/rt64_math.cpp
+@@ -52,7 +52,10 @@ namespace RT64 {
+         v[2][2] = -vp[2][3];
+         v[3][2] = -vp[3][3];
+ 
+-        p[2][2] = vp[0][2] / v[0][2];
++        // Least squares over the three rotation rows: dividing a single pair of elements is ill-conditioned when
++        // that component of the view axis is near zero, and the inputs are often quantized fixed-point values.
++        const float axisLengthSq = sqr(v[0][2]) + sqr(v[1][2]) + sqr(v[2][2]);
++        p[2][2] = (vp[0][2] * v[0][2] + vp[1][2] * v[1][2] + vp[2][2] * v[2][2]) / axisLengthSq;
+         p[3][2] = vp[3][2] - p[2][2] * v[3][2];
+ 
+         p[0][0] = sqrtf(sqr(vp[0][0]) + sqr(vp[1][0]) + sqr(vp[2][0]));
+diff --git a/src/render/rt64_projection_processor.cpp b/src/render/rt64_projection_processor.cpp
+index e842dcc..937c9f3 100644
+--- a/src/render/rt64_projection_processor.cpp
++++ b/src/render/rt64_projection_processor.cpp
+@@ -107,9 +107,11 @@ namespace RT64 {
+             viewProjMatrix = drawData.viewProjTransforms[proj.transformsIndex];
+ 
+             // Debugger camera.
++            bool exactViewProj = true;
+             if (workload.debuggerCamera.enabled && (proj.type == Projection::Type::Perspective) && (workload.debuggerCamera.sceneIndex == sceneIndex)) {
+                 viewMatrix = workload.debuggerCamera.viewMatrix;
+                 projMatrix = workload.debuggerCamera.projMatrix;
++                exactViewProj = false;
+             }
+ 
+             adjustProjectionMatrix(projMatrix, projRatioScale);
+@@ -126,6 +128,7 @@ namespace RT64 {
+ 
+                 // We only interpolate the projection if the view matrix has been interpolated.
+                 const bool interpolateProjection = rigidBody->lerpTranslation || rigidBody->lerpRotation;
++                exactViewProj = false;
+                 if (interpolateProjection) {
+                     projMatrix = lerpMatrix(adjustedPrevProj, curProjTransform, p.curFrameWeight);
+                     prevProjTransform = lerpMatrix(adjustedPrevProj, curProjTransform, p.prevFrameWeight);
+@@ -140,10 +143,20 @@ namespace RT64 {
+                 prevProjTransform = projMatrix;
+             }
+ 
+-            viewProjMatrix = hlslpp::mul(viewMatrix, projMatrix);
+-
+             interop::float4x4 &prevViewProjTransform = drawData.prevViewProjTransforms[proj.transformsIndex];
+-            prevViewProjTransform = hlslpp::mul(prevViewTransform, prevProjTransform);
++            if (exactViewProj) {
++                // Nothing was interpolated or replaced: scale the game's own view-projection matrix instead of
++                // rebuilding it from the decomposed view and projection. Scaling the projection's X column scales
++                // the product's X column identically, while the decomposition can be ill-conditioned for some
++                // camera orientations and introduce depth errors that change every frame.
++                viewProjMatrix = drawData.viewProjTransforms[proj.transformsIndex];
++                adjustProjectionMatrix(viewProjMatrix, projRatioScale);
++                prevViewProjTransform = viewProjMatrix;
++            }
++            else {
++                viewProjMatrix = hlslpp::mul(viewMatrix, projMatrix);
++                prevViewProjTransform = hlslpp::mul(prevViewTransform, prevProjTransform);
++            }
+         }
+     }
+ 

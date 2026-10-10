@@ -10,3 +10,49 @@ symbols_file_path = "YoshiStorySyms/yoshisstory.us.syms.toml"
 [patches]
 stubs = []
 ignored = []
+
+# Overlays: tell the runtime where the game put each one. Overlay_Load
+# (vromStart, vromEnd, vramStart, vramEnd, allocatedRamAddr) DMAs a
+# relocatable overlay into RAM and relocates it. The recompiled code for that
+# overlay reaches its own functions and data through the section's load
+# address, so register it here, at the top of Overlay_Load, and drop
+# whatever was registered in that RAM before (STATUS.md round 2).
+[[patches.hook]]
+func = "Overlay_Load"
+before_vram = 0x8008169C
+text = "unload_overlays((int32_t)MEM_W(0x10, ctx->r29), (uint32_t)(ctx->r7 - ctx->r6)); load_overlays((uint32_t)ctx->r4, (int32_t)MEM_W(0x10, ctx->r29), (uint32_t)(ctx->r5 - ctx->r4));"
+
+# Frontend UI pump: recompui's queued per-frame UI callbacks run on the game
+# thread. Hooked just before the game's only osViSwapBuffer call, in
+# func_80071974 (the framebuffer swap loop), which runs once per presented
+# frame. Both paths into 0x80071A18 pass through the hook. The pump may use
+# a0-a2 and the stack (restored before it returns), so they're saved here;
+# at this point only s-registers are live and a0 is set in the jal's delay
+# slot.
+[[patches.hook]]
+func = "func_80071974"
+before_vram = 0x80071A18
+text = "{ gpr a0 = ctx->r4, a1 = ctx->r5, a2 = ctx->r6; recomp_run_ui_callbacks(rdram, ctx); ctx->r4 = a0; ctx->r5 = a1; ctx->r6 = a2; }"
+
+# Loads into $zero (`lw $zero, off(reg)`): a read whose result is thrown
+# away, which N64Recomp emits as the invalid C `0 = MEM_W(...)`. With no
+# cache or bus side effects to preserve here, they become nops.
+[[patches.instruction]]
+func = "func_80071FF0"
+vram = 0x80072040
+value = 0x00000000
+
+[[patches.instruction]]
+func = "func_8007C1A0"
+vram = 0x8007C2BC
+value = 0x00000000
+
+[[patches.instruction]]
+func = "func_8007C1A0"
+vram = 0x8007C2D0
+value = 0x00000000
+
+[[patches.instruction]]
+func = "func_8007C1A0"
+vram = 0x8007C2DC
+value = 0x00000000
