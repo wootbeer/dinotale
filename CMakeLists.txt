@@ -426,3 +426,9 @@ endif()
 target_sources(DinoTale PRIVATE ${SOURCES})
 
 set_property(TARGET DinoTale PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+# A copy of assets/ next to the exe, so it runs from the build folder too
+# (Visual Studio's F5, double-clicking the exe). See also main.cpp, which
+# switches to the exe's folder when the working directory has no assets/.
+add_custom_command(TARGET DinoTale POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:DinoTale>/assets)

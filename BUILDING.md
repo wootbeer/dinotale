@@ -1,5 +1,30 @@
 # Building Guide
 
+## Quick start: Windows with Visual Studio 2022
+
+Needs Visual Studio 2022 with the "Desktop development with C++" workload
+and its "C++ Clang Compiler for Windows" and "C++ CMake tools for Windows"
+components, plus Git. Then, in PowerShell:
+
+```powershell
+git clone --recurse-submodules https://github.com/wootbeer/dinotale.git C:\dev\dinotale
+cd C:\dev\dinotale
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\tools\setup-windows.ps1 -Rom "C:\path\to\your Yoshi's Story dump.n64"
+```
+
+The script converts and checks your ROM, generates the recompiled code and
+builds `build\windows-release\DinoTale.exe`. Then open the folder in Visual
+Studio (File > Open > Folder), pick the **Windows Release** configuration
+(or **Windows Debug** for a build with debug info), choose **DinoTale.exe**
+as the startup item and press F5.
+
+After pulling changes, run `.\tools\setup-windows.ps1` again (no `-Rom`
+needed) to regenerate the recompiled code, or just rebuild in Visual Studio
+if only `src\` changed. `-Icon <png>` replaces the app icon.
+
+The rest of this guide is the same process step by step.
+
 You need your own copy of the game: Yoshi's Story, USA (see README.md for
 the hash). The ROM is never committed to this repository; the recompiled
 code is generated from it locally.
@@ -12,8 +37,7 @@ git clone --recurse-submodules https://github.com/wootbeer/dinotale.git
 git submodule update --init --recursive
 ```
 
-Development happens on a `claude/...` branch until there's a first release;
-check it out before the submodule update if `main` doesn't have the code yet.
+`main` has the latest work.
 
 ## 2. Install dependencies
 

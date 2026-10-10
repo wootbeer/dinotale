@@ -29,6 +29,7 @@ and leave the game's own behaviour, look and balance alone.
 
 - [x] First level reached: Yoshi is controllable (round 5)
 - [x] Windows build instructions and packaging script (untested)
+- [x] Visual Studio setup: presets and a one-step setup script (untested)
 
 ## In progress
 
@@ -53,6 +54,8 @@ and leave the game's own behaviour, look and balance alone.
 | `tools/gen_overlay_yaml.py` | splat segments for the overlays |
 | `tools/make_syms.py` | Builds the symbol file |
 | `tools/regen_symbols.sh` | The whole symbol pipeline, from your ROM |
+| `tools/setup-windows.ps1` | One-step Windows/Visual Studio setup |
+| `CMakePresets.json` | Build configurations for Visual Studio and Linux |
 | `tools/normalize_rom.py` | Converts `.n64`/`.v64` dumps to `.z64` |
 | `aspMain.us.toml` | RSPRecomp config for the audio microcode |
 | `src/main/` | Frontend: window, audio, input, config, crash reporting |

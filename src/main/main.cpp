@@ -365,8 +365,28 @@ std::vector<recomp::GameEntry> supported_games = {
     std::abort();
 }
 
+// The UI loads assets/ relative to the working directory. When started from
+// somewhere else (a debugger, a shortcut), use the exe's own folder, which
+// the build fills with a copy of assets/.
+static void find_assets_folder() {
+    std::error_code ec;
+    if (std::filesystem::exists("assets", ec)) {
+        return;
+    }
+    char* base = SDL_GetBasePath();
+    if (base == nullptr) {
+        return;
+    }
+    std::filesystem::path exe_dir = std::filesystem::path(reinterpret_cast<const char8_t*>(base));
+    SDL_free(base);
+    if (std::filesystem::exists(exe_dir / "assets", ec)) {
+        std::filesystem::current_path(exe_dir, ec);
+    }
+}
+
 int main(int argc, char** argv) {
     std::set_terminate(report_unhandled_exception_and_abort);
+    find_assets_folder();
 
     recomp::Version project_version{};
     if (!recomp::Version::from_string(version_string, project_version)) {

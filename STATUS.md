@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 6: Visual Studio setup
+
+For building and debugging locally on Windows:
+
+- `CMakePresets.json`: **Windows Release** and **Windows Debug**
+  (RelWithDebInfo) presets with clang-cl and Ninja, which Visual Studio's
+  Open Folder picks up, plus a Linux one.
+- `tools/setup-windows.ps1`: one-time setup. It enters Visual Studio's x64
+  environment itself, fetches submodules, converts the ROM's byte order (in
+  C#, no Python needed) and checks its SHA-1, builds and runs N64Recomp,
+  then configures and builds the Release preset. `-Icon` rebuilds the app
+  icon files from a PNG.
+- The build copies `assets/` next to the exe, and the game switches to its
+  own folder at startup when the working directory has no `assets/`, so it
+  runs from Visual Studio's F5 or a double-click as well as from the repo
+  root.
+
 ## Round 5: first level runs; Windows build path
 
 **The game reaches its first level.** From the Page 1 book Yoshi goes into
