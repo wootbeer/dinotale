@@ -83,6 +83,19 @@ RspExitReason aspMain(uint8_t* rdram, uint32_t ucode_addr);
 #endif
 
 static RspUcodeFunc* get_rsp_microcode(const OSTask* task) {
+    // Log each distinct (type, microcode) pair once: the game may run
+    // RSP microcode other than audio and graphics.
+    static std::mutex seen_mutex;
+    static std::vector<std::pair<uint32_t, uint32_t>> seen;
+    {
+        std::lock_guard<std::mutex> lock(seen_mutex);
+        std::pair<uint32_t, uint32_t> key{ task->t.type, (uint32_t)task->t.ucode };
+        if (std::find(seen.begin(), seen.end(), key) == seen.end()) {
+            seen.push_back(key);
+            fprintf(stderr, "[RSP] task type %" PRIu32 ", ucode 0x%08X (size 0x%X), ucode_data 0x%08X\n",
+                task->t.type, (uint32_t)task->t.ucode, (uint32_t)task->t.ucode_size, (uint32_t)task->t.ucode_data);
+        }
+    }
     switch (task->t.type) {
 #ifdef DT_HAS_RSP_AUDIO
     case M_AUDTASK:

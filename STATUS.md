@@ -6,6 +6,34 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 5: first level runs; Windows build path
+
+**The game reaches its first level.** From the Page 1 book Yoshi goes into
+the level and is controllable (he jumps on A). The game's frame loop and
+RSP tasks keep running normally there (about 35 buffer swaps a second
+under the debugger).
+
+**What isn't known yet: the level's look.** On the Linux test setup
+(software Vulkan on a virtual X server) the level shows black around Yoshi,
+and Yoshi leaves trails, as if nothing clears or covers the frame. But that
+setup also stops presenting partway into the level: the software driver's
+presenter blocks sending the image to the virtual X server while the game
+keeps rendering, so the screenshots there stop updating. Whether the
+missing background is the port or the test setup needs a real GPU. The
+next test is a Windows build.
+
+**Ruled out:** the RSP. Logging every distinct RSP task shows only the
+audio microcode (type 2, ucode 0x80094260, data 0x800B4080) besides
+graphics, which RT64 handles; the game doesn't use the RSP for anything
+else such as decompression.
+
+**Windows.** `BUILDING.md` now has the Windows steps (Visual Studio 2022
+with clang-cl, as for the BattleTanx port, minus WSL: there's no MIPS
+patch library here) and `tools/package-windows.ps1` packages a release zip.
+
+**Diagnostics.** RSP tasks are logged once per distinct microcode
+(`[RSP] task type ...` on stderr).
+
 ## Round 4: menus and Story Mode; overlays reused in memory
 
 **Input works.** With the frontend's default keyboard binding (Enter =

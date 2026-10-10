@@ -1,8 +1,5 @@
 # Building Guide
 
-The project is in early development; there is no playable build yet. This
-covers what exists so far and will grow with it.
-
 You need your own copy of the game: Yoshi's Story, USA (see README.md for
 the hash). The ROM is never committed to this repository; the recompiled
 code is generated from it locally.
@@ -15,43 +12,99 @@ git clone --recurse-submodules https://github.com/wootbeer/dinotale.git
 git submodule update --init --recursive
 ```
 
-## 2. Put the ROM in place
+Development happens on a `claude/...` branch until there's a first release;
+check it out before the submodule update if `main` doesn't have the code yet.
 
-Place your dump at the repo root as `yoshisstory.us.z64`. It must be
-big-endian `.z64`; to convert:
+## 2. Install dependencies
 
-```bash
-python3 tools/normalize_rom.py "your dump.n64" yoshisstory.us.z64
-```
+### Windows
 
-## 3. Generate the recompiled code
+- Visual Studio 2022 with the "Desktop development with C++" workload,
+  including the "C++ Clang Compiler for Windows" and "C++ CMake tools for
+  Windows" components.
+- Python 3 (only for `tools/normalize_rom.py`, if your dump isn't `.z64`).
 
-```bash
-cmake -S lib/N64ModernRuntime/N64Recomp -B lib/N64ModernRuntime/N64Recomp/build -G Ninja
-cmake --build lib/N64ModernRuntime/N64Recomp/build --target N64RecompCLI
-./lib/N64ModernRuntime/N64Recomp/build/N64Recomp yoshisstory.us.toml
-```
+That's all: the renderer uses D3D12 on Windows and CMake fetches SDL2
+itself. (Unlike the BattleTanx port, there's no MIPS patch library, so WSL
+isn't needed.)
 
-This writes `RecompiledFuncs/` (gitignored).
-
-## 4. Build and run
-
-Dependencies on Ubuntu/Debian:
+### Linux (Ubuntu/Debian)
 
 ```bash
 sudo apt-get install cmake ninja-build libsdl2-dev libgtk-3-dev libvulkan-dev lld llvm clang
 ```
 
+## 3. Put the ROM in place
+
+Place your dump at the repo root as `yoshisstory.us.z64`. It must be
+big-endian `.z64`; to convert a `.n64`/`.v64` dump:
+
+```bash
+python3 tools/normalize_rom.py "your dump.n64" yoshisstory.us.z64
+```
+
+The game also asks for the ROM on first launch (any byte order) and checks
+its hash.
+
+## 4. Generate the recompiled code
+
+Build N64Recomp and run it on the config. This writes `RecompiledFuncs/`
+(gitignored; regenerate it after any change to `yoshisstory.us.toml` or the
+symbol file).
+
+**Windows** (in an "x64 Native Tools Command Prompt for VS 2022" or a
+Developer PowerShell set to x64, see Troubleshooting):
+
+```powershell
+$env:DT_CLANGCL = "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\Llvm\x64\bin\clang-cl.exe"
+cmake -S lib\N64ModernRuntime\N64Recomp -B lib\N64ModernRuntime\N64Recomp\build -G Ninja -DCMAKE_C_COMPILER="$env:DT_CLANGCL" -DCMAKE_CXX_COMPILER="$env:DT_CLANGCL"
+cmake --build lib\N64ModernRuntime\N64Recomp\build --target N64RecompCLI
+lib\N64ModernRuntime\N64Recomp\build\N64Recomp.exe yoshisstory.us.toml
+```
+
+**Linux:**
+
+```bash
+cmake -S lib/N64ModernRuntime/N64Recomp -B lib/N64ModernRuntime/N64Recomp/build -G Ninja
+cmake --build lib/N64ModernRuntime/N64Recomp/build --target N64RecompCLI -j$(nproc)
+./lib/N64ModernRuntime/N64Recomp/build/N64Recomp yoshisstory.us.toml
+```
+
+The main build (next step) generates the audio microcode (`rsp/`) itself.
+
+## 5. Build and run
+
+**Windows:**
+
+```powershell
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER="$env:DT_CLANGCL" -DCMAKE_CXX_COMPILER="$env:DT_CLANGCL"
+cmake --build build --target DinoTale
+.\build\DinoTale.exe
+```
+
+**Linux:**
+
 ```bash
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
-cmake --build build --target DinoTale
+cmake --build build --target DinoTale -j$(nproc)
 ./build/DinoTale
 ```
 
-Run it from the repo root (it loads `assets/` from the working directory).
-The audio microcode (`rsp/aspMain.cpp`) is generated from the ROM by the
-build itself. Windows steps (Visual Studio 2022 with clang-cl) will follow
-the BattleTanx port's and be written up here once tested.
+Run it from the repo root: it loads `assets/` relative to the working
+directory. `--game yoshisstory` skips the launcher once the ROM has been
+selected. Configuring applies the patches in `lib-patches/` to the
+submodules (once; they show as modified submodules afterwards).
+
+## 6. Package a Windows release
+
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\tools\package-windows.ps1 -Version 0.0.1
+```
+
+Builds Release in `build-release\` and writes
+`dist\DinoTale-<version>-windows.zip` (exe, DLLs, `assets\`, README,
+licenses). Steps 1-4 must be done first.
 
 ## Regenerating the symbol file (optional)
 
@@ -61,3 +114,19 @@ your ROM (Linux, needs `binutils-mips-linux-gnu`, `python3-venv`, `wget`):
 ```bash
 tools/regen_symbols.sh yoshisstory.us.z64
 ```
+
+## Troubleshooting (Windows)
+
+**x64 shell.** The build must use the x64 toolchain. A Developer PowerShell
+can default to x86, which fails late with `lld-link: undefined symbol:
+mainCRTStartup`. `$env:LIB` must contain `\x64` paths. If not, open "x64
+Native Tools Command Prompt for VS 2022" (in cmd, use `set
+"DT_CLANGCL=..."` and `%DT_CLANGCL%`). `tools\package-windows.ps1` sets this
+up itself.
+
+**Which clang-cl.** Visual Studio ships a 32-bit-hosted `clang-cl.exe` in
+`VC\Tools\Llvm\bin\` and a 64-bit one in `VC\Tools\Llvm\x64\bin\`. Pass the
+x64 one by full path as above. Adjust `Community` to your edition.
+
+**Starting over.** After changing compiler or architecture, delete the
+build folder and configure again.

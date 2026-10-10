@@ -27,10 +27,14 @@ and leave the game's own behaviour, look and balance alone.
 
 - [x] Input (keyboard), main menu, Story Mode's opening scene (round 4)
 
+- [x] First level reached: Yoshi is controllable (round 5)
+- [x] Windows build instructions and packaging script (untested)
+
 ## In progress
 
-- [ ] First level: Yoshi is drawn, the level around him is black
-- [ ] Windows build
+- [ ] First Windows build and test on a real GPU
+- [ ] Level graphics: on the software-rendered Linux test the level is black
+      around Yoshi; to be checked on real hardware
 
 ## Next
 
