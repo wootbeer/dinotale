@@ -200,7 +200,7 @@ namespace {
 }
 
 // Records where N64 memory starts, to translate faulting addresses (called
-// from a per-frame hook).
+// from the Idle_ThreadEntry hook in yoshisstory.us.toml).
 extern "C" void dinotale_crash_note_rdram(uint8_t* rdram) {
     rdram_base = rdram;
 }

@@ -56,3 +56,74 @@ value = 0x00000000
 func = "func_8007C1A0"
 vram = 0x8007C2DC
 value = 0x00000000
+
+# Boot-state checks (STATUS.md round 3). The game reads several things only a
+# real console leaves behind after boot and keeps a flag for each; a failed
+# check quietly breaks the game later (e.g. func_800461F4's callback becomes
+# a stub that returns 0). Each one is answered with what an original
+# cartridge on real hardware gives:
+#  - Idle_ThreadEntry reads the first words of SP IMEM and DMEM (0xA4001000,
+#    0xA4000000), expected to be 0x17D8 and 0xFFFFFFFF. The two loads become
+#    immediates.
+#  - func_8005D420 and func_800687B8 read uncached RDRAM 0xA00002B8 and
+#    0xA0000164 (left by the boot code), and func_800687B8 also checks
+#    osCicId (0x80000310). Their `lui 0xA000` become `lui 0x8000` (the same
+#    memory, cached) and the hook below seeds the three words.
+#  - func_8006F500 reads two words of the cartridge's boot code directly
+#    over the PI bus (ROM 0x458 and 0x45C, low halves). It's replaced by a
+#    hook that stores the same result, 0x0260BCD5, which func_80064AD4
+#    compares against.
+# The same hook tells the crash handler where N64 memory is.
+[[patches.hook]]
+func = "Idle_ThreadEntry"
+before_vram = 0x80067284
+text = "dinotale_crash_note_rdram(rdram); MEM_W(0, (gpr)(int32_t)0x80000164) = 0x01EC6021; MEM_W(0, (gpr)(int32_t)0x800002B8) = 0x8941680C; MEM_W(0, (gpr)(int32_t)0x80000310) = 0x17D8;"
+
+[[patches.instruction]]
+func = "Idle_ThreadEntry"
+vram = 0x80067334
+value = 0x340917D8 # ori $t1, $zero, 0x17D8
+
+[[patches.instruction]]
+func = "Idle_ThreadEntry"
+vram = 0x80067344
+value = 0x240BFFFF # addiu $t3, $zero, -1
+
+[[patches.instruction]]
+func = "func_8005D420"
+vram = 0x8005D444
+value = 0x3C0E8000 # lui $t6, 0x8000
+
+[[patches.instruction]]
+func = "func_800687B8"
+vram = 0x800687DC
+value = 0x3C188000 # lui $t8, 0x8000
+
+[[patches.hook]]
+func = "func_8006F500"
+before_vram = 0x8006F500
+text = "MEM_W(0, (gpr)(int32_t)0x80108620) = 0x0260BCD5; return;"
+
+# func_8000AD10 is the game's own copy of osAiSetNextBuffer(buf, size),
+# writing the audio interface registers directly (with libultra's
+# 8 KB-boundary workaround). It's handed to the runtime's osAiSetNextBuffer,
+# which plays the buffer.
+[[patches.hook]]
+func = "func_8000AD10"
+before_vram = 0x8000AD10
+text = "osAiSetNextBuffer_recomp(rdram, ctx); return;"
+
+# Uncached pointers. func_800035B4 and func_800035F8 allocate a buffer,
+# invalidate its cache lines and return it as a KSEG1 (uncached) address,
+# K0 + 0x20000000. The runtime only maps RDRAM at KSEG0, so the adds are
+# removed and the buffers are used through their KSEG0 address, which is the
+# same memory. Nothing in the game converts these pointers back.
+[[patches.instruction]]
+func = "func_800035B4"
+vram = 0x800035E0
+value = 0x00000000
+
+[[patches.instruction]]
+func = "func_800035F8"
+vram = 0x80003624
+value = 0x00000000

@@ -108,7 +108,10 @@ def hi_lo_targets(d, o):
     for r in out:
         if r[2] is None:
             raise ValueError("unpaired HI16 at 0x%08X" % r[0])
-    return [tuple(r) for r in out]
+    # N64Recomp walks a section's relocs in step with its instructions, so
+    # they must be in address order; the game's tables aren't always (an
+    # IDO HI16 can be listed after a later one).
+    return sorted((tuple(r) for r in out), key=lambda r: r[0])
 
 
 def emit_section(name, rom, vram, size, funcs, relocs=None):

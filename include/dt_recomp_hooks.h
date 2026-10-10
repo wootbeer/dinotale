@@ -11,6 +11,12 @@
 void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size);
 void unload_overlays(int32_t ram_addr, uint32_t size);
 
+// librecomp/src/ultra_translation.cpp
+void osAiSetNextBuffer_recomp(uint8_t* rdram, recomp_context* ctx);
+
+// src/main/crash_handler.cpp
+void dinotale_crash_note_rdram(uint8_t* rdram);
+
 // lib/RecompFrontend/recompui/src/api/ui_api_events.cpp
 void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 

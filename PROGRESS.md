@@ -22,9 +22,13 @@ and leave the game's own behaviour, look and balance alone.
 - [x] Audio microcode (RSP) recompiled from the ROM
 - [x] First full build: `DinoTale` compiles and links (Linux)
 
+- [x] **First boot: title screen and the storybook intro render**
+      (Linux, software renderer; round 3)
+
 ## In progress
 
-- [ ] First boot (testing headless with a software renderer)
+- [ ] Getting into gameplay: input, menus, first level
+- [ ] Windows build
 
 ## Next
 

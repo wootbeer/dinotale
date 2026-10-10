@@ -6,6 +6,66 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 3: first boot -- title screen and intro
+
+On Linux with a software Vulkan renderer (lavapipe) the game now boots to
+the title screen and plays the storybook intro, drawn by RT64. What it took,
+in the order the crashes came:
+
+**Hardware reads in the boot thread.** `Idle_ThreadEntry` stores the first
+words of SP IMEM and DMEM (`IO_READ(0xA4001000)`, `IO_READ(0xA4000000)`),
+which aren't memory here.
+
+**Boot-state checks.** Those two values turned out to be part of a set of
+checks on what the console leaves behind after booting an original
+cartridge. Each stores a flag, and a failed one breaks the game quietly
+later rather than at once:
+
+| Read | Expected | Flag | On failure |
+|---|---|---|---|
+| SP IMEM[0] | 0x17D8 | `D_800A5AD0` | |
+| SP DMEM[0] | 0xFFFFFFFF | (checked in `func_80051504`) | object setup is skipped |
+| `osCicId` (0x80000310) | 0x17D8 | `D_800A6EB4` | a memory block is never freed |
+| RDRAM 0xA0000164 | 0x01EC6021 | `D_800A6EB8` | a callback becomes a stub returning 0 |
+| RDRAM 0xA00002B8 | 0x8941680C | `D_800A62F0` | |
+| ROM 0x458/0x45C over the PI bus (`func_8006F500`) | 0x0260BCD5 | `D_800A6590` | |
+
+In each case the flag is 1 when the value matches, and the matching value
+is what an original cartridge gives (the ROM check compares against the
+ROM's own bytes). They're all answered that way: the IMEM/DMEM loads become
+immediates, the uncached RDRAM reads go through KSEG0 instead and the words
+are seeded at boot, and `func_8006F500` is replaced by a hook that stores
+its result.
+
+**Audio interface.** `func_8000AD10` is the game's own copy of
+`osAiSetNextBuffer`, writing the AI registers directly. A hook hands it to
+the runtime's version.
+
+**Uncached buffers.** `func_800035B4`/`func_800035F8` return freshly
+allocated buffers as KSEG1 addresses (+0x20000000). The runtime maps RDRAM
+only at KSEG0, so the add is removed; nothing converts them back.
+
+**EEPROM size.** The game creates its EEPROM manager with type 2 and hangs
+(`eepmgr_Probe`'s `LOOP()`) if the probe answers anything else, so the save
+type is 16 Kbit, not 4 Kbit as first set in round 2.
+
+**Relocation order.** The first overlay function to use a table in its own
+data called through a null pointer: of two `lui`s next to each other, only
+one had been relocated. The game's relocation tables aren't always in
+address order (here the HI16 for 0x80455814 comes before the one for
+0x80455810), and N64Recomp steps through a section's relocations in order
+with its instructions, so it skipped the second. `tools/make_syms.py` now
+sorts them; 711 relocations had been out of order.
+
+**Crash reports** now translate faulting addresses to N64 addresses (the
+crash handler is told where RDRAM is from the `Idle_ThreadEntry` hook).
+
+**Overlays seen loading before the intro:** 13, all registered and
+relocated as designed in round 2.
+
+**Testing setup.** Xvfb plus lavapipe, with the ROM pre-stored in a
+portable folder and `--game yoshisstory` to skip the launcher.
+
 ## Round 2: runtime project, overlay registration, audio microcode
 
 **Runtime project.** CMake, frontend (`src/main/`) and crash reporting

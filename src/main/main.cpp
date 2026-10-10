@@ -313,8 +313,9 @@ std::vector<recomp::GameEntry> supported_games = {
         .display_name = "Yoshi's Story",
         .game_id = u8"yoshisstory.n64.us",
         .mod_game_id = "yoshisstory",
-        // The cartridge has a 4 Kbit EEPROM (the game's eepmgr).
-        .save_type = recomp::SaveType::Eep4k,
+        // The cartridge has a 16 Kbit EEPROM: the game creates its eepmgr
+        // with type 2 and hangs if the probe disagrees.
+        .save_type = recomp::SaveType::Eep16k,
         .thumbnail_bytes = {},
         .is_enabled = true,
         .decompression_routine = nullptr,
