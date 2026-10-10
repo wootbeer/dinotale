@@ -1,0 +1,12 @@
+# N64Recomp config for Yoshi's Story (USA, En/Ja).
+# See STATUS.md for how each part was derived.
+
+[input]
+entrypoint = 0x80000400
+output_func_path = "RecompiledFuncs"
+rom_file_path = "yoshisstory.us.z64"
+symbols_file_path = "YoshiStorySyms/yoshisstory.us.syms.toml"
+
+[patches]
+stubs = []
+ignored = []

@@ -1,0 +1,85 @@
+# VSCode file settings
+.vscode/settings.json
+.vscode/c_cpp_properties.json
+.vscode/launch.json
+
+# Input elf and rom files
+*.elf
+*.z64
+*.n64
+*.v64
+
+# Output C files
+RecompiledFuncs/
+RecompiledPatches/
+# RSP microcode recompiled from the ROM (n_aspMain.us.rev0.toml)
+rsp/
+
+# patches/ build output (patches.elf is covered by the *.elf rule below)
+patches/*.o
+patches/*.d
+patches/*.bin
+patches/*.map
+
+# Linux build output
+build/
+build-cmake/
+*.o
+
+# Windows build output
+*.exe
+*.dll
+*.lib
+*.pdb
+
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+out/
+.vs/
+vcpkg_installed/
+
+# Runtime files
+imgui.ini
+rt64.log
+
+node_modules/
+
+# Recompiler binaries built from the vendored submodule; never commit these.
+/N64Recomp
+/RSPRecomp
+
+.DS_Store
+gamecontrollerdb.txt
+
+# Ghidra project files and any local exports containing copyrighted disassembly text
+*.gpr
+*.rep/
+ghidra_exports/
+
+# splat working output (regenerated from the ROM, not source of truth once curated)
+/asm/
+/build-syms/
+/.splache/
+
+# Never commit raw excerpts of the ROM itself, however they're captured
+assets/unk_*.bin
+*.7z
+
+# Release packaging (tools/package-windows.ps1)
+build-release/
+dist/
+
+# Symbol regeneration work dir (tools/regen_symbols.sh) holds a decomp clone and the ROM
+/build-syms/
+
+__pycache__/
