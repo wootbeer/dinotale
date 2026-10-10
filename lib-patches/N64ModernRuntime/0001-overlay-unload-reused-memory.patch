@@ -1,0 +1,39 @@
+diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
+index 8c8e5d1..aac21af 100644
+--- a/librecomp/src/overlays.cpp
++++ b/librecomp/src/overlays.cpp
+@@ -243,25 +243,21 @@ extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
+         const auto& section = sections_info.code_sections[it->section_table_index];
+ 
+         // Check if the unloaded region overlaps with the loaded section
+-        if (ram_addr < (it->loaded_ram_addr + section.size) && (ram_addr + size) >= it->loaded_ram_addr) {
+-            // Check if the section isn't entirely in the loaded region
+-            if (ram_addr > it->loaded_ram_addr || (ram_addr + size) < (it->loaded_ram_addr + section.size)) {
+-                fprintf(stderr,
+-                    "Cannot partially unload section\n"
+-                    "  rom: 0x%08X size: 0x%08X loaded_addr: 0x%08X\n"
+-                    "  unloaded_ram: 0x%08X unloaded_size : 0x%08X\n",
+-                        section.rom_addr, section.size, it->loaded_ram_addr, ram_addr, size);
+-                assert(false);
+-                std::exit(EXIT_FAILURE);
+-            }
++        if (ram_addr < (it->loaded_ram_addr + section.size) && (ram_addr + size) > it->loaded_ram_addr) {
++            // A section that's only partly covered is unloaded whole: its
++            // memory is being reused, so none of it is valid any more.
+             // Determine where each function was loaded to and remove that entry from the function map
+             for (size_t func_index = 0; func_index < section.num_funcs; func_index++) {
+                 const auto& func = section.funcs[func_index];
+                 uint32_t func_address = func.offset + it->loaded_ram_addr;
+                 func_map.erase(func_address);
+             }
+-            // Reset the section's address in the address table
+-            section_addresses[section.index] = section.ram_addr;
++            // Reset the section's address in the address table, unless the
++            // section has since been loaded again somewhere else: then this
++            // is a stale copy and the current one stays in use.
++            if (section_addresses[section.index] == it->loaded_ram_addr) {
++                section_addresses[section.index] = section.ram_addr;
++            }
+             // Remove the section from the loaded section map
+             it = loaded_sections.erase(it);
+             // Skip incrementing the iterator

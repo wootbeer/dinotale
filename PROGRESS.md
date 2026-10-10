@@ -25,9 +25,11 @@ and leave the game's own behaviour, look and balance alone.
 - [x] **First boot: title screen and the storybook intro render**
       (Linux, software renderer; round 3)
 
+- [x] Input (keyboard), main menu, Story Mode's opening scene (round 4)
+
 ## In progress
 
-- [ ] Getting into gameplay: input, menus, first level
+- [ ] First level: Yoshi is drawn, the level around him is black
 - [ ] Windows build
 
 ## Next

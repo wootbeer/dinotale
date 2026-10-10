@@ -6,6 +6,32 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 4: menus and Story Mode; overlays reused in memory
+
+**Input works.** With the frontend's default keyboard binding (Enter =
+Start) the game goes from the intro to the title book, the main menu (Story
+Mode / Trial Mode / Options / Practice) and into Story Mode's opening scene.
+
+**Overlays loaded more than once.** The game frees an overlay's memory and
+later loads overlays into the same memory, and loads the same overlay again
+at a different address (the overlay at ROM 0xBBFF30 was first at 0x803FF420,
+later at 0x803F98C0). The runtime isn't told when an overlay is freed, so it
+only learns at the next `Overlay_Load` that memory is being reused, and
+that region doesn't line up with the old overlay: librecomp's
+`unload_overlays` stopped the game with "Cannot partially unload section".
+A runtime patch (`lib-patches/N64ModernRuntime/`, applied at configure time
+like the RT64 one) changes two things:
+
+- an overlay that's only partly covered by reused memory is dropped whole;
+- dropping a stale copy doesn't reset the section's address if the same
+  overlay has since been loaded again elsewhere. Without this, loading a
+  new overlay over the old copy's memory pointed the live copy's code back
+  at its link-time address, and it read a null pointer from what it took to
+  be its own data.
+
+**Now:** in Story Mode's first level Yoshi is drawn but the level around
+him is black; next round looks at why.
+
 ## Round 3: first boot -- title screen and intro
 
 On Linux with a software Vulkan renderer (lavapipe) the game now boots to

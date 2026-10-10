@@ -70,9 +70,11 @@ if (RECOMP_FLATPAK)
     add_compile_definitions(RECOMP_FLATPAK)
 endif()
 
-# Local RT64 fixes (lib-patches/rt64/), applied to the submodule at configure time.
+# Local fixes to RT64 and N64ModernRuntime (lib-patches/), applied to the
+# submodules at configure time.
 include(${CMAKE_SOURCE_DIR}/cmake/ApplyLibPatches.cmake)
 dinotale_apply_lib_patches(rt64)
+dinotale_apply_lib_patches(N64ModernRuntime)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/rt64 ${CMAKE_BINARY_DIR}/rt64)
 
