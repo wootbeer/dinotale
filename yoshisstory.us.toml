@@ -165,3 +165,10 @@ text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_half_width_bits();"
 func = "func_80058CC0"
 before_vram = 0x80058CD4
 text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_half_width_bits();"
+
+# A background layer being freed (the end of a level): Expand's view width is
+# kept for the whole level, see src/game/widescreen.cpp.
+[[patches.hook]]
+func = "func_8004F38C"
+before_vram = 0x8004F38C
+text = "dinotale_bg_view_freed();"

@@ -6,6 +6,24 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 19: Expand can only be chosen outside a level
+
+Expand takes effect when a level starts, since that's when the game creates
+its background layers and camera, and switching to it in the middle of one
+glitched. Now:
+
+- `src/game/widescreen.cpp` counts the live background layers (created in
+  `func_8004F2B0`, freed in `func_8004F38C`, both hooked). The view width
+  is worked out when a level's first layer is created and kept until its
+  last is freed, so all the hooks agree for the whole level, even if the
+  setting changes meanwhile.
+- While a level that started without Expand is running, the Expand choice
+  is greyed out in Settings > Graphics > Aspect Ratio, and the description
+  says it can only be turned on outside a level. Inside a level started with
+  Expand, switching away and back is allowed. (`RecompFrontend/0001`: a
+  thread-safe `set_expand_available`, applied by the options page on the UI
+  thread.)
+
 ## Round 18: Expand, camera covers the wider view
 
 **Problem:** at a level's left end, Expand showed background-buffer columns

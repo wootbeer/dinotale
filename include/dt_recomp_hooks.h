@@ -24,5 +24,6 @@ void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 int32_t dinotale_bg_view_width(int32_t width);
 uint32_t dinotale_camera_half_width_bits(void);
 uint32_t dinotale_camera_width_bits(void);
+void dinotale_bg_view_freed(void);
 
 #endif // DT_RECOMP_HOOKS_H
