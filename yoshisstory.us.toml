@@ -175,3 +175,23 @@ text = "dinotale_bg_cover_outside(rdram, (uint32_t)ctx->r17, (uint32_t)ctx->r16)
 func = "func_8005F690"
 before_vram = 0x8005F6DC
 text = "dinotale_bg_cover_outside(rdram, (uint32_t)MEM_W(0x20, ctx->r29), (uint32_t)MEM_W(0x24, ctx->r29));"
+
+# Expand: the fruit frame (30 slots around the screen edge) spread across the
+# wider screen; see src/game/widescreen.cpp.
+[[patches.hook]]
+func = "func_80579F18"
+before_vram = 0x80579F18
+text = "dinotale_fruit_frame_begin(rdram, (uint32_t)ctx->r5);"
+
+[[patches.hook]]
+func = "func_80579F18"
+before_vram = 0x8057A2B0
+text = "dinotale_fruit_frame_end(rdram);"
+
+# Expand: the health flower moves out to the left edge of the wider screen;
+# see src/game/widescreen.cpp. At the end of func_8004733C (actor in $a2,
+# screen x pointer at sp+0x18).
+[[patches.hook]]
+func = "func_8004733C"
+before_vram = 0x80047418
+text = "dinotale_hud_actor_screen_pos(rdram, ctx);"

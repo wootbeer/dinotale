@@ -46,7 +46,8 @@ and leave the game's own behaviour, look and balance alone.
 
 ## Next
 
-- [ ] Expand: HUD to the window edges; check vertically scrolling levels
+- [x] Expand: HUD (fruit frame, health flower) at the window edges (round 23)
+- [ ] Expand: check vertically scrolling levels
 - [ ] Play through more levels in every aspect mode
 
 - [ ] Graphics, input, saves (EEPROM), audio

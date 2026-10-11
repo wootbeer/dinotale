@@ -6,6 +6,26 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 23: Expand, HUD at the window edges
+
+Yoshi's Story's in-level HUD is the fruit frame (30 slots around the edge of
+the screen that fill with the fruit Yoshi eats) and the health flower in the
+top left. In Expand both now use the wider screen:
+
+- **Fruit frame:** `func_80579F18` (ovl_128) reads the 30 slot positions
+  from the frame object (x at `+0x48`, y at `+0xC0`, floats relative to the
+  middle of the screen) and writes the slot sprites. A hook at its start
+  spreads the x positions by the width ratio (432/320), and one at its end
+  restores them, so the frame keeps its shape around the window.
+- **Health flower:** two actors (ids `0x4010`/`0x4011`) that keep themselves
+  60 px right of the camera's left edge. A hook at the end of
+  `func_8004733C` (actor to screen position) moves just those two left by the
+  extra margin.
+
+Found by logging the S2DEX object positions in RT64, then watching the
+sprite and matrix structs for the game code that writes them. Original,
+Stretch and Hybrid are unchanged.
+
 ## Round 22: text box shimmer, part 2
 
 **Report:** text scrolling in message boxes still shimmers slightly.
