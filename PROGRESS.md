@@ -36,14 +36,18 @@ and leave the game's own behaviour, look and balance alone.
       screen, sprites and HUD in levels (round 8)
 - [x] Level backgrounds and texture-load status in RT64 (round 9)
 - [x] Aspect ratio options: Original, Stretch, Hybrid (round 11)
+- [x] Expand: true widescreen with more play area (rounds 13-18); confirmed
+      on Windows
+- [x] Text box seams, screen-edge junk (rounds 12, 14, 17)
 
 ## In progress
 
 - [ ] Rotated S2DEX sprites (drawn unrotated for now)
-- [ ] Expand: true widescreen (more play area, not stretching): backgrounds
-      (round 13) and camera (round 18) done; objects at the edges and HUD to go
 
 ## Next
+
+- [ ] Expand: HUD to the window edges; check vertically scrolling levels
+- [ ] Play through more levels in every aspect mode
 
 - [ ] Graphics, input, saves (EEPROM), audio
 - [ ] Widescreen, higher framerates
