@@ -6,6 +6,24 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 31: game picked from a .zip or .7z
+
+**Request:** let players pick the game inside an archive (.zip, .rar, .7z).
+
+**Change:** when the picked file isn't a ROM, librecomp's `select_rom` now
+hands its contents to an archive reader the game registers
+(`N64ModernRuntime/0003`), then checks the result exactly as before.
+`src/main/rom_archive.cpp` reads `.zip` with miniz (MIT, already part of
+N64ModernRuntime) and `.7z` with the LZMA SDK's 7z decoder (public domain,
+`thirdparty/lzma-sdk`, the files the SDK's own 7z example builds). The first
+file inside with an N64 ROM header, in any byte order, is used. `.rar` is
+left out: the official decoder's license isn't GPL-compatible.
+
+Tested: zip and 7z (LZMA, solid with another file, PPMd), a byte-swapped
+`.n64` inside, an archive with no ROM (the usual "not a valid ROM" message),
+and the launcher's file picker end to end (the stored copy matches the
+`.z64`).
+
 ## Round 30: pre-release cleanup (0.1.0)
 
 - **Privacy sweep:** every commit message, author and file in the published

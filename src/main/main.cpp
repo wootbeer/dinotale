@@ -58,6 +58,9 @@ extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 // relocatable overlays.
 void register_dinotale_overlays();
 
+// rom_archive.cpp: the game's ROM from a .zip or .7z, or nothing.
+std::vector<uint8_t> dinotale_read_rom_archive(const std::vector<uint8_t>& file_data);
+
 static const std::string program_name = "DinoTale";
 static const std::u8string program_id = u8"dinotale";
 static const std::string version_string = "0.1.0";
@@ -418,6 +421,8 @@ int main(int argc, char** argv) {
     for (const auto& game : supported_games) {
         recomp::register_game(game);
     }
+    // The game can also be picked inside a .zip or .7z (rom_archive.cpp).
+    recomp::register_rom_archive_reader(dinotale_read_rom_archive);
 
     recompinput::players::set_single_player_mode(true);
 

@@ -138,6 +138,21 @@ target_sources(RecompiledFuncs PRIVATE ${FUNC_C_SOURCES} ${FUNC_CXX_SOURCES})
 # Main executable
 add_executable(DinoTale)
 
+# The LZMA SDK's 7z decoder (public domain), for reading the game from a .7z
+# (src/main/rom_archive.cpp). Only the files its own 7z example builds.
+set(LZMA_SDK_DIR ${CMAKE_SOURCE_DIR}/thirdparty/lzma-sdk/C)
+add_library(lzma_sdk_7z STATIC
+    ${LZMA_SDK_DIR}/7zAlloc.c ${LZMA_SDK_DIR}/7zArcIn.c ${LZMA_SDK_DIR}/7zBuf.c
+    ${LZMA_SDK_DIR}/7zBuf2.c ${LZMA_SDK_DIR}/7zCrc.c ${LZMA_SDK_DIR}/7zCrcOpt.c
+    ${LZMA_SDK_DIR}/7zDec.c ${LZMA_SDK_DIR}/7zStream.c ${LZMA_SDK_DIR}/Bcj2.c
+    ${LZMA_SDK_DIR}/Bra.c ${LZMA_SDK_DIR}/Bra86.c ${LZMA_SDK_DIR}/BraIA64.c
+    ${LZMA_SDK_DIR}/CpuArch.c ${LZMA_SDK_DIR}/Delta.c ${LZMA_SDK_DIR}/Lzma2Dec.c
+    ${LZMA_SDK_DIR}/LzmaDec.c ${LZMA_SDK_DIR}/Ppmd7.c ${LZMA_SDK_DIR}/Ppmd7Dec.c
+)
+target_compile_definitions(lzma_sdk_7z PRIVATE Z7_PPMD_SUPPORT Z7_EXTRACT_ONLY)
+target_include_directories(lzma_sdk_7z PUBLIC ${LZMA_SDK_DIR})
+target_link_libraries(DinoTale PRIVATE lzma_sdk_7z)
+
 # The frontend (src/main) and the game-specific fixes (src/game). The RSP
 # audio microcode (rsp/) is generated from the ROM and added further down.
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS

@@ -65,6 +65,7 @@ $licenses = [ordered]@{
     "GamepadMotionHelpers"  = "lib\RecompFrontend\lib\GamepadMotionHelpers\LICENSE"
     "SlotMap"               = "lib\RecompFrontend\lib\SlotMap\slot_map.h"
     "DirectXShaderCompiler" = "licenses\DirectXShaderCompiler.txt"
+    "LZMA-SDK"              = "thirdparty\lzma-sdk\lzma-sdk.txt"
 }
 foreach ($entry in $licenses.GetEnumerator()) {
     if (Test-Path $entry.Value) {

@@ -1,0 +1,47 @@
+diff --git a/librecomp/include/librecomp/game.hpp b/librecomp/include/librecomp/game.hpp
+index a4cf7e8..f96153e 100644
+--- a/librecomp/include/librecomp/game.hpp
++++ b/librecomp/include/librecomp/game.hpp
+@@ -89,6 +89,10 @@ namespace recomp {
+     void check_all_stored_roms();
+     bool load_stored_rom(const std::u8string& game_id);
+     RomValidationError select_rom(const std::filesystem::path& rom_path, const std::u8string& game_id);
++    // DinoTale: reads a ROM out of an archive (.zip, .7z). select_rom calls it with the picked file's
++    // contents when they aren't a ROM themselves; it returns the ROM's bytes, or nothing.
++    using rom_archive_reader_t = std::vector<uint8_t> (*)(const std::vector<uint8_t>& file_data);
++    void register_rom_archive_reader(rom_archive_reader_t reader);
+     bool is_rom_valid(const std::u8string& game_id);
+     bool is_rom_loaded();
+     void set_rom_contents(std::vector<uint8_t>&& new_rom);
+diff --git a/librecomp/src/recomp.cpp b/librecomp/src/recomp.cpp
+index 850689d..88a1184 100644
+--- a/librecomp/src/recomp.cpp
++++ b/librecomp/src/recomp.cpp
+@@ -357,6 +357,12 @@ void byteswap_data(std::vector<uint8_t>& rom_data, size_t index_xor) {
+     }
+ }
+ 
++static recomp::rom_archive_reader_t rom_archive_reader = nullptr;
++
++void recomp::register_rom_archive_reader(rom_archive_reader_t reader) {
++    rom_archive_reader = reader;
++}
++
+ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_path, const std::u8string& game_id) {
+     auto find_it = game_roms.find(game_id);
+ 
+@@ -372,6 +378,14 @@ recomp::RomValidationError recomp::select_rom(const std::filesystem::path& rom_p
+         return recomp::RomValidationError::FailedToOpen;
+     }
+ 
++    // DinoTale: a game picked inside an archive.
++    if ((rom_archive_reader != nullptr) && (check_rom_start(rom_data) == ByteswapType::Invalid)) {
++        std::vector<uint8_t> extracted = rom_archive_reader(rom_data);
++        if (!extracted.empty()) {
++            rom_data = std::move(extracted);
++        }
++    }
++
+     // Pad the rom to the nearest multiple of 4 bytes.
+     rom_data.resize((rom_data.size() + 3) & ~3);
+ 

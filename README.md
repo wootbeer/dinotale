@@ -34,7 +34,8 @@ in-game menu.
 
 ### Game files
 
-Yoshi's Story (USA) (En,Ja). Any byte order (`.z64`, `.n64`, `.v64`) works.
+Yoshi's Story (USA) (En,Ja). Any byte order (`.z64`, `.n64`, `.v64`) works,
+and it can be picked inside a `.zip` or `.7z` (extract a `.rar` first).
 SHA-1 of the `.z64`: `B13072FEF6C6DF48C07D8822C01E5BC59036F6DA`
 
 ## Display options

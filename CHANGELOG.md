@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The game can be picked inside a `.zip` or `.7z` archive.
+
 ## 0.1.0
 
 First release.
