@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 28: Expand, stale tiles when scrolling vertically
+
+**Report:** in Tower Climb, blocks of the wrong background tiles show up as
+the screen scrolls up.
+
+**Cause:** as the camera moves vertically, the game queues a row of new tiles
+for each background layer (`func_8004FB98`). The row starts at the wider
+view's left column, but its length comes from the level data: 20 columns,
+plus one when the view isn't on a tile boundary. In Expand the view is 27-28
+columns wide, so the last 7 columns of each new row were never drawn and kept
+the tiles from further down the level (dark tiles over the blue section, and
+so on). Rows were logged with a gdb breakpoint on the tile-run drawer
+(`func_8005F2CC`): every row request was 21 columns.
+
+**Fix:** a hook where the count is stored (0x8004FBF4) adds the view's extra
+columns (`dinotale_bg_row_columns`). Other modes are unchanged.
+
 ## Round 27: Hybrid, dimmed sides
 
 **Report:** in Hybrid, things pop in near the sides of the screen; only the

@@ -170,6 +170,15 @@ extern "C" uint32_t dinotale_camera_half_width_bits() {
     return float_bits(float(active_view_width()) / 2.0f);
 }
 
+// The number of 16-pixel tile columns in a background row request
+// (func_8004FB98), for a level whose data gives `columns` (20 for the 320-wide
+// screen). The request starts at the wider view's left column, so in Expand
+// it needs the view's extra columns too, or rows streamed in as the camera
+// moves up or down stop short of the right side and leave old tiles there.
+extern "C" int32_t dinotale_bg_row_columns(int32_t columns) {
+    return columns + (current_view_width() - original_view_width) / 16;
+}
+
 // Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background
 // image to cover with black when it's drawn.
 extern "C" void rt64_dinotale_set_bg_left_mask(uint32_t address, int32_t columns);

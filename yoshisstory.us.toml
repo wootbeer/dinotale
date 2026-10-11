@@ -195,3 +195,13 @@ text = "dinotale_fruit_frame_end(rdram);"
 func = "func_8004733C"
 before_vram = 0x80047418
 text = "dinotale_hud_actor_screen_pos(rdram, ctx);"
+
+# Expand: a background row request covers the level's column count (20, +1
+# when the view isn't on a tile boundary), not the view's width, so rows
+# streamed in as the camera moves vertically stopped short of the wider
+# view's right side. Add the extra columns; see src/game/widescreen.cpp.
+# func_8004FB98 stores the count ($t1) into the request at 0x8004FBF4.
+[[patches.hook]]
+func = "func_8004FB98"
+before_vram = 0x8004FBF4
+text = "ctx->r9 = dinotale_bg_row_columns(ctx->r9);"
