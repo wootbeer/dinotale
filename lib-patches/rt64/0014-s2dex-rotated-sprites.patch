@@ -1,0 +1,182 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index bbd3702..09ed6a8 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -787,32 +787,96 @@ namespace RT64 {
+             drawObjRect(state, o, x0, y0, x1, y1);
+         }
+ 
+-        // G_OBJ_SPRITE: transformed by the full 2D matrix. Drawn as a texture
+-        // rectangle, which covers scaling, mirroring and translation.
+-        // TODO: rotation and shear (B, C) need the sprite drawn as two triangles;
+-        // for now the rectangle is the transformed sprite's bounding box.
++        // G_OBJ_SPRITE: transformed by the full 2D matrix. Without rotation or shear
++        // (B, C) it's a texture rectangle, which covers scaling, mirroring and
++        // translation. With them, the microcode draws the sprite as two triangles;
++        // here it goes through the rectangle path over its bounding box, with the
++        // corners moved to where the matrix puts them.
+         static void doObjSprite(State *state, const ObjSprite &o) {
+             const auto &m = state->rsp->S2D.objMtx;
+-            const float sx0 = o.objX;
+-            const float sy0 = o.objY;
+-            const float sx1 = o.objX + o.imageW / o.scaleW;
+-            const float sy1 = o.objY + o.imageH / o.scaleH;
++            float sx0 = o.objX;
++            float sy0 = o.objY;
++            float sx1 = o.objX + o.imageW / o.scaleW;
++            float sy1 = o.objY + o.imageH / o.scaleH;
+             if ((m.B == 0.0f) && (m.C == 0.0f)) {
+                 drawObjRect(state, o, m.A * sx0 + m.X, m.D * sy0 + m.Y, m.A * sx1 + m.X, m.D * sy1 + m.Y);
+                 return;
+             }
+ 
+-            const float xs[4] = { m.A * sx0 + m.B * sy0, m.A * sx1 + m.B * sy0, m.A * sx0 + m.B * sy1, m.A * sx1 + m.B * sy1 };
+-            const float ys[4] = { m.C * sx0 + m.D * sy0, m.C * sx1 + m.D * sy0, m.C * sx0 + m.D * sy1, m.C * sx1 + m.D * sy1 };
+-            const float minX = std::min(std::min(xs[0], xs[1]), std::min(xs[2], xs[3]));
+-            const float maxX = std::max(std::max(xs[0], xs[1]), std::max(xs[2], xs[3]));
+-            const float minY = std::min(std::min(ys[0], ys[1]), std::min(ys[2], ys[3]));
+-            const float maxY = std::max(std::max(ys[0], ys[1]), std::max(ys[2], ys[3]));
+-            const bool mirrorX = (m.A < 0.0f);
+-            const bool mirrorY = (m.D < 0.0f);
+-            drawObjRect(state, o,
+-                (mirrorX ? maxX : minX) + m.X, (mirrorY ? maxY : minY) + m.Y,
+-                (mirrorX ? minX : maxX) + m.X, (mirrorY ? minY : maxY) + m.Y);
++            RDP *rdp = state->rdp.get();
++            const uint32_t objRenderMode = state->rsp->objRenderMode;
++            const uint8_t clamp = (objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) ? (G_TX_WRAP | G_TX_NOMIRROR) : G_TX_CLAMP;
++            const int texW = std::max(int(o.imageW), 1);
++            const int texH = std::max(int(o.imageH), 1);
++            rdp->setTile(G_TX_RENDERTILE, o.imageFmt, o.imageSiz, o.imageStride, o.imageAdrs, o.imagePal, clamp, clamp, 0, 0, 0, 0);
++            rdp->setTileSize(G_TX_RENDERTILE, 0, 0, uint16_t((texW - 1) << 2), uint16_t((texH - 1) << 2));
++
++            // Texture coordinates of the sprite's edges, trimmed as in drawObjRect.
++            float shrink = 0.0f;
++            if (objRenderMode & S2DEX_G_OBJRM_SHRINKSIZE_2) {
++                shrink = 1.0f;
++            }
++            else if (objRenderMode & S2DEX_G_OBJRM_SHRINKSIZE_1) {
++                shrink = 0.5f;
++            }
++
++            if (shrink > 0.0f) {
++                if ((o.imageW <= 2.0f * shrink) || (o.imageH <= 2.0f * shrink)) {
++                    return;
++                }
++
++                const float insetX = shrink * (sx1 - sx0) / o.imageW;
++                const float insetY = shrink * (sy1 - sy0) / o.imageH;
++                sx0 += insetX;
++                sx1 -= insetX;
++                sy0 += insetY;
++                sy1 -= insetY;
++            }
++
++            float s0 = shrink, s1 = o.imageW - shrink;
++            float t0 = shrink, t1 = o.imageH - shrink;
++            if (o.imageFlags & S2DEX_G_OBJ_FLAG_FLIPS) {
++                std::swap(s0, s1);
++            }
++
++            if (o.imageFlags & S2DEX_G_OBJ_FLAG_FLIPT) {
++                std::swap(t0, t1);
++            }
++
++            // Corners in the order top left, top right, bottom left, bottom right of the sprite.
++            const float spriteX[4] = { sx0, sx1, sx0, sx1 };
++            const float spriteY[4] = { sy0, sy0, sy1, sy1 };
++            const float texS[4] = { s0, s1, s0, s1 };
++            const float texT[4] = { t0, t0, t1, t1 };
++            RDP::QuadOverride &quad = rdp->quadOverride;
++            float minX = 0.0f, maxX = 0.0f, minY = 0.0f, maxY = 0.0f;
++            for (int i = 0; i < 4; i++) {
++                const float x = m.A * spriteX[i] + m.B * spriteY[i] + m.X;
++                const float y = m.C * spriteX[i] + m.D * spriteY[i] + m.Y;
++                quad.pos[i][0] = x;
++                quad.pos[i][1] = y;
++                quad.tc[i][0] = texS[i];
++                quad.tc[i][1] = texT[i];
++                minX = (i == 0) ? x : std::min(minX, x);
++                maxX = (i == 0) ? x : std::max(maxX, x);
++                minY = (i == 0) ? y : std::min(minY, y);
++                maxY = (i == 0) ? y : std::max(maxY, y);
++            }
++
++            const int32_t ulx = int32_t(std::floor(minX * 4.0f));
++            const int32_t uly = int32_t(std::floor(minY * 4.0f));
++            const int32_t lrx = int32_t(std::ceil(maxX * 4.0f));
++            const int32_t lry = int32_t(std::ceil(maxY * 4.0f));
++            if ((lrx <= ulx) || (lry <= uly)) {
++                return;
++            }
++
++            // The rectangle's own texture coordinates only bound the texels it samples: the whole image.
++            const int16_t dsdx = int16_t(std::lround(o.imageW * 4096.0f / float(lrx - ulx)));
++            const int16_t dtdy = int16_t(std::lround(o.imageH * 4096.0f / float(lry - uly)));
++            quad.active = true;
++            rdp->drawTexRect(ulx, uly, lrx, lry, G_TX_RENDERTILE, 0, 0, dsdx, dtdy, false);
++            quad.active = false;
+         }
+ 
+         void objRectangle(State *state, DisplayList **dl) {
+diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
+index 603b622..4bd0591 100644
+--- a/src/hle/rt64_rdp.cpp
++++ b/src/hle/rt64_rdp.cpp
+@@ -1214,6 +1214,7 @@ namespace RT64 {
+ 
+         const FixedRect drawRect(movedFromOrigin(ulx, extAlignment.leftOrigin), uly, movedFromOrigin(lrx, extAlignment.rightOrigin), lry);
+         if (drawRect.isEmpty()) {
++            quadOverride.active = false;
+             return;
+         }
+ 
+@@ -1309,6 +1310,27 @@ namespace RT64 {
+         triTcFloats.emplace_back(flip ? v1 : v2);
+         drawCall.triangleCount += 2;
+ 
++        if (quadOverride.active) {
++            quadOverride.active = false;
++
++            // The rectangle's vertices are its corners in the order TL, TR, BL, BR, TR, BL, with x and y from -1
++            // to 1 across it (y up).
++            const float left = drawRect.ulx / 4.0f;
++            const float top = drawRect.uly / 4.0f;
++            const float width = std::max(drawRect.lrx - drawRect.ulx, 1) / 4.0f;
++            const float height = std::max(drawRect.lry - drawRect.uly, 1) / 4.0f;
++            static const int corners[6] = { 0, 1, 2, 3, 1, 2 };
++            float *pos = triPosFloats.data() + triPosFloats.size() - 6 * 4;
++            float *tc = triTcFloats.data() + triTcFloats.size() - 6 * 2;
++            for (int i = 0; i < 6; i++) {
++                const int c = corners[i];
++                pos[i * 4 + 0] = 2.0f * (quadOverride.pos[c][0] - left) / width - 1.0f;
++                pos[i * 4 + 1] = 1.0f - 2.0f * (quadOverride.pos[c][1] - top) / height;
++                tc[i * 2 + 0] = quadOverride.tc[c][0];
++                tc[i * 2 + 1] = quadOverride.tc[c][1];
++            }
++        }
++
+         // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
+         // what the bounds of the real sampling will be if necessary.
+         // DinoTale: a scissor edge anchored to the window with an extended-GBI origin reaches past its stored
+diff --git a/src/hle/rt64_rdp.h b/src/hle/rt64_rdp.h
+index 84f4e7c..b12f631 100644
+--- a/src/hle/rt64_rdp.h
++++ b/src/hle/rt64_rdp.h
+@@ -211,5 +211,16 @@ namespace RT64 {
+         void drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip);
+         void drawTexRect(int32_t ulx, int32_t uly, int32_t lrx, int32_t lry, uint8_t tile, int16_t uls, int16_t ult, int16_t dsdx, int16_t dtdy, bool flip, const ExtendedAlignment &extAlignment);
+         void updateCallTexcoords(float u, float v);
++
++        // DinoTale: when active, the next drawRect places its four corners (top left, top right, bottom left,
++        // bottom right) at these screen positions (pixels, inside the rectangle) with these texture coordinates
++        // (texels) instead of the rectangle's own, so a rotated sprite can go through the rectangle path.
++        struct QuadOverride {
++            bool active = false;
++            float pos[4][2];
++            float tc[4][2];
++        };
++
++        QuadOverride quadOverride;
+     };
+ };
+\ No newline at end of file

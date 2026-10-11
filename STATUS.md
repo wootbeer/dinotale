@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 26: rotated sprites
+
+**Report:** in Tower Climb (Page 1, course 4) the flower platforms didn't
+tilt when Yoshi stood near an edge, though Yoshi tilted.
+
+**Cause:** RT64's S2DEX `G_OBJ_SPRITE` (and `G_OBJ_LDTX_SPRITE`) ignored the
+2D matrix's rotation terms (B, C): a rotated sprite was drawn unrotated over
+its bounding box. The N64 microcode draws such a sprite as two textured
+triangles.
+
+**Fix** (`rt64/0014`): a rotated sprite still goes through RT64's rectangle
+path, over its bounding box, so it is placed and scaled in every aspect mode
+like any other sprite. The rectangle's four corners are then moved to where
+the matrix puts the sprite's corners, with the texture coordinates of those
+corners (flips and SHRINKSIZE handled as for unrotated sprites). The RDP gets
+a one-shot `quadOverride` for that.
+
 ## Round 25: HUD Placement setting with Expand
 
 **Report:** Expand with HUD Placement set to Original still put the HUD at
