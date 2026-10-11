@@ -1,0 +1,32 @@
+diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
+index 9d58098..69bdc1a 100644
+--- a/src/render/rt64_framebuffer_renderer.cpp
++++ b/src/render/rt64_framebuffer_renderer.cpp
+@@ -1682,6 +1682,11 @@ namespace RT64 {
+                         // and a negative scissor offset is invalid (some drivers then skip the draw entirely).
+                         triangles.scissor.left = std::max(triangles.scissor.left, 0);
+                         triangles.scissor.top = std::max(triangles.scissor.top, 0);
++                        // The same correction rounds a scissor anchored to the right window edge down by a few pixels,
++                        // leaving an undrawn strip; keep it at the edge.
++                        if ((call.callDesc.scissorRightOrigin == G_EX_ORIGIN_RIGHT) && (extOriginPercentage >= 1.0f)) {
++                            triangles.scissor.right = std::max(triangles.scissor.right, int32_t(std::lround(wideWidth)));
++                        }
+ 
+                         bool usesViewport = (proj.type == Projection::Type::Perspective) || (proj.type == Projection::Type::Orthographic);
+                         if (usesViewport) {
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index 9b75e3f..88b2de6 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -137,7 +137,9 @@ namespace RT64 {
+             const float pixelW = (bottomRightViewport.x - topLeftViewport.x) / float(viViewRect.z);
+             const float pixelH = (bottomRightViewport.y - topLeftViewport.y) / float(viViewRect.w);
+             scissor.left = std::max(scissor.left, int32_t(std::lround(topLeftViewport.x + pixelW)));
+-            scissor.top = std::max(scissor.top, int32_t(std::lround(topLeftViewport.y + pixelH)));
++            // Two rows at the top: the first drawn row samples the wrapped bottom of the sky layer's ring buffer,
++            // which the game never fills, and at higher resolutions that shows as specks.
++            scissor.top = std::max(scissor.top, int32_t(std::lround(topLeftViewport.y + 2.0f * pixelH)));
+         }
+     }
+ };
+\ No newline at end of file

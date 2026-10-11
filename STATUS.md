@@ -6,6 +6,17 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 17: top specks and right-edge strip
+
+- **Top specks (Expand/Hybrid, higher resolutions):** the first row the game
+  draws samples, with bilinear filtering, the wrapped last row of the sky
+  layer's ring buffer, which the game never fills. At 1x it barely
+  contributes; upscaled, the first few output rows take most of it. The
+  output mask now covers the top two rows (`rt64/0011`).
+- **Right-edge strip (Expand, higher resolutions):** the misalignment
+  correction also rounds the window-anchored right scissor edge down, leaving
+  a few pixels undrawn. It's pinned to the window edge (`rt64/0011`).
+
 ## Round 16: Expand at higher resolutions
 
 Expand drew nothing but 3D models (Yoshi) on the test setup at 2x/3x
