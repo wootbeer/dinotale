@@ -125,16 +125,29 @@ submodules (they show as modified submodules afterwards). When a pull adds or
 changes a patch, the next configure resets those submodules' files and
 applies the whole set again, so local edits inside `lib/` are lost.
 
-## 6. Package a Windows release
+## 6. Package a release
+
+Windows (PowerShell, after `tools\setup-windows.ps1 -Rom ...` has run once):
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\tools\package-windows.ps1 -Version 0.0.1
+.\tools\package-windows.ps1 -Version 0.1.0
 ```
 
-Builds Release in `build-release\` and writes
-`dist\DinoTale-<version>-windows.zip` (exe, DLLs, `assets\`, README,
-licenses). Steps 1-4 must be done first.
+Builds through `tools\setup-windows.ps1` (the same Release build you play)
+and writes `dist\DinoTale-<version>-windows.zip`.
+
+Linux (after steps 1-4):
+
+```bash
+tools/package-linux.sh 0.1.0
+```
+
+Writes `dist/DinoTale-<version>-linux.tar.gz`.
+
+Both contain the program, `assets/`, README, CHANGELOG, the license and the
+third-party license notices. Never the ROM: players pick their own copy on
+first launch. Test the packaged build before publishing it.
 
 ## Regenerating the symbol file (optional)
 

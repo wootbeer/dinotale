@@ -35,9 +35,15 @@ SHA-1 of the big-endian `.z64`:
 
 ## Playing
 
-Download the latest Windows build from
-[Releases](https://github.com/wootbeer/dinotale/releases), unzip it anywhere
-and run `DinoTale.exe`. On first launch, pick your copy of the game; it's
+Download the latest build from
+[Releases](https://github.com/wootbeer/dinotale/releases):
+
+- **Windows:** unzip it anywhere and run `DinoTale.exe`.
+- **Linux / Steam Deck:** extract the `.tar.gz` and run `DinoTale` (on the
+  Deck, from Desktop Mode; add it to Steam as a non-Steam game to play it in
+  Game Mode).
+
+On first launch, pick your copy of the game; it's
 checked against the hash above and never modified. Settings (graphics,
 controls, sound) are in the in-game menu.
 

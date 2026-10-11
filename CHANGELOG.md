@@ -10,5 +10,6 @@ First release.
   to 16:9, showing more of each level).
 - HUD Placement setting for Expand.
 - Saves, keyboard and controller input, audio.
+- Windows and Linux builds. The Linux build is new; Steam Deck reports welcome.
 
 Still being tested: later pages and boss fights, especially in Expand.
