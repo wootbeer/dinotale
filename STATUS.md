@@ -6,6 +6,38 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 10: widescreen feasibility
+
+**Question:** can the levels show more play area in 16:9, rather than
+stretching? RT64's "Expand" mode currently stretches the two front background
+layers (they span the full 4:3 width) and leaves the sky layer at 4:3, so the
+top corners are black and sprites no longer line up with the scenery.
+
+**How the level backgrounds work** (traced from the machine code with memory
+diffs and watchpoints; the decomp hasn't reached this code yet):
+
+- Each of the three parallax layers is a 336x256 CI8 image used as a
+  horizontal **ring buffer** of 21 columns of 16 pixels. S2DEX's
+  `G_BG_1CYC` wraps the image, so the view can start at any column.
+- As the camera moves, the game draws the newly exposed 16x16 tiles into the
+  ring buffer **with the RDP**: it points the colour image at the buffer and
+  draws tile rectangles. Only 16 pixels exist beyond the 320-pixel screen.
+- The code lives in `main` around 0x8005EC98-0x8005F700: `func_8005EC98`
+  copies each frame's tile requests to the layer, `func_8005F5D0` sets the
+  render target (`func_80073728`), draws the queued tiles
+  (`func_8005F3F4`/`func_8005F510` -> `func_80073D58`) and then the
+  background itself (`func_8007DB34`).
+- The buffers are allocated from the game's heap. The game uses only the
+  first 4 MB of RDRAM; the 4 MB above are free.
+
+**Verdict: feasible.** The ring buffer's size is data (width, height, column
+count) rather than being baked into the drawing code, and there is room in
+memory for wider buffers. The plan: widen the buffers and the column count,
+make the tile queue cover the wider view, draw the backgrounds across the
+full width with RT64's extended GBI, then widen sprite/enemy culling and the
+camera limits. Still to find: where the 336/21 values and the tile queue's
+visible width are set.
+
 ## Round 9: black level backgrounds and garbled tiles
 
 **Symptoms:** in levels the parallax backgrounds were black (so moving

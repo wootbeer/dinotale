@@ -39,6 +39,8 @@ and leave the game's own behaviour, look and balance alone.
 ## In progress
 
 - [ ] Rotated S2DEX sprites (drawn unrotated for now)
+- [ ] True widescreen (more play area, not stretching): feasibility checked,
+      background streaming understood (round 10)
 
 ## Next
 
