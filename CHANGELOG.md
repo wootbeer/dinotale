@@ -4,7 +4,7 @@
 
 First release.
 
-- Yoshi's Story (USA) runs natively on Windows, recompiled with N64Recomp
+- Yoshi's Story (USA) runs natively on PC, recompiled with N64Recomp
   and rendered with RT64. Bring your own copy of the game.
 - Aspect ratios: Original, Stretch, Hybrid and Expand (true widescreen up
   to 16:9, showing more of each level).
