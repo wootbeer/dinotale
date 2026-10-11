@@ -24,6 +24,9 @@ the layer's image address. When RT64 draws that background it fills the
 strip with black (`rt64/0012`, `BgLeftMask`). Layers draw back to front and
 the far ones reach further left, so each covers only its own junk. The level
 start and walking back both show a clean black edge, the storybook look.
+Confirmed on Windows. Sprites (enemies, items) can still be drawn over the
+black strip; that's the game's own content, not garbage, and left as is
+since players rarely walk back to that edge.
 
 ## Round 20: Expand, objects shifted (round 18 reverted)
 
