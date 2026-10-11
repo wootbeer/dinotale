@@ -31,11 +31,14 @@ and leave the game's own behaviour, look and balance alone.
 - [x] Windows build instructions and packaging script (untested)
 - [x] Visual Studio setup: presets and a one-step setup script (untested)
 
+- [x] Windows build runs on real hardware; menus work (round 7)
+- [x] S2DEX sprites implemented in RT64: Options screen, lucky fruit
+      screen, sprites and HUD in levels (round 8)
+
 ## In progress
 
-- [ ] First Windows build and test on a real GPU
-- [ ] Level graphics: on the software-rendered Linux test the level is black
-      around Yoshi; to be checked on real hardware
+- [ ] Level backgrounds (black, causing trails) and garbled block tiles
+- [ ] Rotated S2DEX sprites (drawn unrotated for now)
 
 ## Next
 

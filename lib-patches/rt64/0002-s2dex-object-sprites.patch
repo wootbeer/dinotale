@@ -1,0 +1,293 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index 4b41bfa..2b7b7bc 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -4,6 +4,10 @@
+ 
+ #include "rt64_gbi_s2dex.h"
+ 
++#include <algorithm>
++#include <cmath>
++#include <cstring>
++
+ #include "../include/rt64_extended_gbi.h"
+ 
+ #include "rt64_gbi_extended.h"
+@@ -546,6 +550,179 @@ namespace RT64 {
+             }
+         }
+ 
++        // --- Sprite objects (uObjSprite) -----------------------------------------
++        // The S2D struct buffer holds RDRAM's 32-bit words in host order, so the
++        // N64's big-endian fields are read through these instead of a packed struct.
++        static uint32_t s2dWord(const uint8_t *buf, uint32_t offset) {
++            uint32_t word;
++            memcpy(&word, buf + (offset & ~3U), sizeof(word));
++            return word;
++        }
++
++        static uint16_t s2dHalf(const uint8_t *buf, uint32_t offset) {
++            const uint32_t word = s2dWord(buf, offset);
++            return (offset & 2) ? uint16_t(word & 0xFFFF) : uint16_t(word >> 16);
++        }
++
++        static uint8_t s2dByte(const uint8_t *buf, uint32_t offset) {
++            const uint32_t word = s2dWord(buf, offset);
++            return uint8_t(word >> (24 - 8 * (offset & 3)));
++        }
++
++        struct ObjSprite {
++            float objX, objY;     // s10.2
++            float scaleW, scaleH; // u5.10
++            float imageW, imageH; // u10.5, in texels
++            uint16_t imageStride; // In 64-bit words.
++            uint16_t imageAdrs;   // TMEM address in 64-bit words.
++            uint8_t imageFmt, imageSiz, imagePal, imageFlags;
++        };
++
++        // Reads a uObjSprite (24 bytes) at the given offset of the struct buffer.
++        static ObjSprite readObjSprite(const uint8_t *buf, uint32_t base) {
++            ObjSprite o;
++            o.objX = int16_t(s2dHalf(buf, base + 0)) / 4.0f;
++            o.scaleW = s2dHalf(buf, base + 2) / 1024.0f;
++            o.imageW = s2dHalf(buf, base + 4) / 32.0f;
++            o.objY = int16_t(s2dHalf(buf, base + 8)) / 4.0f;
++            o.scaleH = s2dHalf(buf, base + 10) / 1024.0f;
++            o.imageH = s2dHalf(buf, base + 12) / 32.0f;
++            o.imageStride = s2dHalf(buf, base + 16);
++            o.imageAdrs = s2dHalf(buf, base + 18);
++            o.imageFmt = s2dByte(buf, base + 20);
++            o.imageSiz = s2dByte(buf, base + 21);
++            o.imagePal = s2dByte(buf, base + 22);
++            o.imageFlags = s2dByte(buf, base + 23);
++            if (o.scaleW <= 0.0f) o.scaleW = 1.0f;
++            if (o.scaleH <= 0.0f) o.scaleH = 1.0f;
++            return o;
++        }
++
++        // Draws a sprite's texture over the screen rectangle (x0, y0)-(x1, y1), in
++        // pixels. Mirrored axes (x1 < x0 or y1 < y0) flip the texture, as do the
++        // sprite's own flip flags. The render tile is set up the way the S2DEX
++        // microcode does it before drawing.
++        static void drawObjRect(State *state, const ObjSprite &o, float x0, float y0, float x1, float y1) {
++            RDP *rdp = state->rdp.get();
++            const uint32_t objRenderMode = state->rsp->objRenderMode;
++            const uint8_t clamp = (objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) ? (G_TX_WRAP | G_TX_NOMIRROR) : G_TX_CLAMP;
++            const int texW = std::max(int(o.imageW), 1);
++            const int texH = std::max(int(o.imageH), 1);
++            rdp->setTile(G_TX_RENDERTILE, o.imageFmt, o.imageSiz, o.imageStride, o.imageAdrs, o.imagePal, clamp, clamp, 0, 0, 0, 0);
++            rdp->setTileSize(G_TX_RENDERTILE, 0, 0, uint16_t((texW - 1) << 2), uint16_t((texH - 1) << 2));
++
++            bool flipS = (o.imageFlags & S2DEX_G_OBJ_FLAG_FLIPS) != 0;
++            bool flipT = (o.imageFlags & S2DEX_G_OBJ_FLAG_FLIPT) != 0;
++            if (x1 < x0) { std::swap(x0, x1); flipS = !flipS; }
++            if (y1 < y0) { std::swap(y0, y1); flipT = !flipT; }
++            const float width = x1 - x0;
++            const float height = y1 - y0;
++            if ((width <= 0.0f) || (height <= 0.0f)) {
++                return;
++            }
++
++            // Texels per screen pixel, as s5.10.
++            const float stepS = o.imageW / width;
++            const float stepT = o.imageH / height;
++            int16_t dsdx = int16_t(std::lround(stepS * 1024.0f));
++            int16_t dtdy = int16_t(std::lround(stepT * 1024.0f));
++            int16_t uls = 0;
++            int16_t ult = 0;
++            if (flipS) { uls = int16_t(std::lround(o.imageW * 32.0f)) - 1; dsdx = -dsdx; }
++            if (flipT) { ult = int16_t(std::lround(o.imageH * 32.0f)) - 1; dtdy = -dtdy; }
++
++            const int32_t ulx = int32_t(std::lround(x0 * 4.0f));
++            const int32_t uly = int32_t(std::lround(y0 * 4.0f));
++            const int32_t lrx = int32_t(std::lround(x1 * 4.0f));
++            const int32_t lry = int32_t(std::lround(y1 * 4.0f));
++            rdp->drawTexRect(ulx, uly, lrx, lry, G_TX_RENDERTILE, uls, ult, dsdx, dtdy, false);
++        }
++
++        // G_OBJ_RECTANGLE: the sprite unscaled by the 2D matrix, at its own position.
++        static void doObjRectangle(State *state, const ObjSprite &o) {
++            const float x0 = o.objX;
++            const float y0 = o.objY;
++            drawObjRect(state, o, x0, y0, x0 + o.imageW / o.scaleW, y0 + o.imageH / o.scaleH);
++        }
++
++        // G_OBJ_RECTANGLE_R: positioned and scaled by the 2D matrix's X, Y and base
++        // scale (no rotation).
++        static void doObjRectangleR(State *state, const ObjSprite &o) {
++            const auto &m = state->rsp->S2D.objMtx;
++            const float bsx = (m.baseScaleX > 0.0f) ? m.baseScaleX : 1.0f;
++            const float bsy = (m.baseScaleY > 0.0f) ? m.baseScaleY : 1.0f;
++            const float x0 = o.objX / bsx + m.X;
++            const float y0 = o.objY / bsy + m.Y;
++            const float x1 = (o.objX + o.imageW / o.scaleW) / bsx + m.X;
++            const float y1 = (o.objY + o.imageH / o.scaleH) / bsy + m.Y;
++            drawObjRect(state, o, x0, y0, x1, y1);
++        }
++
++        // G_OBJ_SPRITE: transformed by the full 2D matrix. Drawn as a texture
++        // rectangle, which covers scaling, mirroring and translation.
++        // TODO: rotation and shear (B, C) need the sprite drawn as two triangles;
++        // for now the rectangle is the transformed sprite's bounding box.
++        static void doObjSprite(State *state, const ObjSprite &o) {
++            const auto &m = state->rsp->S2D.objMtx;
++            const float sx0 = o.objX;
++            const float sy0 = o.objY;
++            const float sx1 = o.objX + o.imageW / o.scaleW;
++            const float sy1 = o.objY + o.imageH / o.scaleH;
++            if ((m.B == 0.0f) && (m.C == 0.0f)) {
++                drawObjRect(state, o, m.A * sx0 + m.X, m.D * sy0 + m.Y, m.A * sx1 + m.X, m.D * sy1 + m.Y);
++                return;
++            }
++
++            const float xs[4] = { m.A * sx0 + m.B * sy0, m.A * sx1 + m.B * sy0, m.A * sx0 + m.B * sy1, m.A * sx1 + m.B * sy1 };
++            const float ys[4] = { m.C * sx0 + m.D * sy0, m.C * sx1 + m.D * sy0, m.C * sx0 + m.D * sy1, m.C * sx1 + m.D * sy1 };
++            const float minX = std::min(std::min(xs[0], xs[1]), std::min(xs[2], xs[3]));
++            const float maxX = std::max(std::max(xs[0], xs[1]), std::max(xs[2], xs[3]));
++            const float minY = std::min(std::min(ys[0], ys[1]), std::min(ys[2], ys[3]));
++            const float maxY = std::max(std::max(ys[0], ys[1]), std::max(ys[2], ys[3]));
++            const bool mirrorX = (m.A < 0.0f);
++            const bool mirrorY = (m.D < 0.0f);
++            drawObjRect(state, o,
++                (mirrorX ? maxX : minX) + m.X, (mirrorY ? maxY : minY) + m.Y,
++                (mirrorX ? minX : maxX) + m.X, (mirrorY ? minY : maxY) + m.Y);
++        }
++
++        void objRectangle(State *state, DisplayList **dl) {
++            readS2DStruct(state, (*dl)->w1, 24);
++            doObjRectangle(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 0));
++        }
++
++        void objSprite(State *state, DisplayList **dl) {
++            readS2DStruct(state, (*dl)->w1, 24);
++            doObjSprite(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 0));
++        }
++
++        void objRectangleR(State *state, DisplayList **dl) {
++            readS2DStruct(state, (*dl)->w1, 24);
++            doObjRectangleR(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 0));
++        }
++
++        // G_OBJ_MOVEMEM: loads a uObjMtx (index 0, 24 bytes) or a uObjSubMtx
++        // (index 2, 8 bytes: X, Y and the base scale) into the 2D matrix.
++        void objMovemem(State *state, DisplayList **dl) {
++            const uint32_t length = (*dl)->p0(16, 8) + 1;
++            const uint32_t index = (*dl)->p0(0, 16);
++            readS2DStruct(state, (*dl)->w1, length);
++            const uint8_t *buf = state->rsp->S2D.struct_buffer.data();
++            auto &m = state->rsp->S2D.objMtx;
++            uint32_t sub = 0;
++            if (index == 0) {
++                m.A = int32_t(s2dWord(buf, 0)) / 65536.0f;
++                m.B = int32_t(s2dWord(buf, 4)) / 65536.0f;
++                m.C = int32_t(s2dWord(buf, 8)) / 65536.0f;
++                m.D = int32_t(s2dWord(buf, 12)) / 65536.0f;
++                sub = 16;
++            }
++            m.X = int16_t(s2dHalf(buf, sub + 0)) / 4.0f;
++            m.Y = int16_t(s2dHalf(buf, sub + 2)) / 4.0f;
++            m.baseScaleX = s2dHalf(buf, sub + 4) / 1024.0f;
++            m.baseScaleY = s2dHalf(buf, sub + 6) / 1024.0f;
++        }
++
+         void objLoadTxtr(State *state, DisplayList **dl) {
+         #ifdef LOG_LOADTXTR_METHODS
+             RT64_LOG_PRINTF("objLoadTxtr::start(0x%08X)", (*dl)->w1);
+@@ -573,8 +750,8 @@ namespace RT64 {
+             doLoadTxtr(state, &obj->txtr);
+             
+             // Execute the sprite draw
+-            // TODO call doObjSprite(state, &obj->sprite) when it's implemented
+-            assert(false);
++            // uObjTxSprite: the uObjSprite follows the 24-byte uObjTxtr.
++            doObjSprite(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 24));
+         #ifdef LOG_LOADTXTR_METHODS
+             RT64_LOG_PRINTF("objLoadTxSprite::end(0x%08X)", (*dl)->w1);
+         #endif
+@@ -592,8 +769,8 @@ namespace RT64 {
+             doLoadTxtr(state, &obj->txtr);
+             
+             // Execute the rect draw
+-            // TODO call doObjRectangle(state, &obj->sprite) when it's implemented
+-            assert(false);
++            // uObjTxSprite: the uObjSprite follows the 24-byte uObjTxtr.
++            doObjRectangle(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 24));
+         #ifdef LOG_LOADTXTR_METHODS
+             RT64_LOG_PRINTF("objLoadTxRect::end(0x%08X)", (*dl)->w1);
+         #endif
+@@ -611,8 +788,8 @@ namespace RT64 {
+             doLoadTxtr(state, &obj->txtr);
+             
+             // Execute the rect r draw
+-            // TODO call doObjRectangleR(state, &obj->sprite) when it's implemented
+-            assert(false);
++            // uObjTxSprite: the uObjSprite follows the 24-byte uObjTxtr.
++            doObjRectangleR(state, readObjSprite(state->rsp->S2D.struct_buffer.data(), 24));
+         #ifdef LOG_LOADTXTR_METHODS
+             RT64_LOG_PRINTF("objLoadTxRectR::end(0x%08X)", (*dl)->w1);
+         #endif
+@@ -620,6 +797,7 @@ namespace RT64 {
+ 
+         void reset(State *state) {
+             state->rsp->objRenderMode = 0x0;
++            state->rsp->S2D.objMtx = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f };
+         }
+ 
+         void setup(GBI *gbi) {
+@@ -645,6 +823,10 @@ namespace RT64 {
+             gbi->map[S2DEX_G_OBJ_LDTX_SPRITE] = &objLoadTxSprite;
+             gbi->map[S2DEX_G_OBJ_LDTX_RECT] = &objLoadTxRect;
+             gbi->map[S2DEX_G_OBJ_LDTX_RECT_R] = &objLoadTxRectR;
++            gbi->map[S2DEX_G_OBJ_RECTANGLE] = &objRectangle;
++            gbi->map[S2DEX_G_OBJ_SPRITE] = &objSprite;
++            gbi->map[S2DEX_G_OBJ_RECTANGLE_R] = &objRectangleR;
++            gbi->map[S2DEX_G_OBJ_MOVEMEM] = &objMovemem;
+             gbi->map[F3D_G_DL] = &GBI_F3D::runDl;
+             gbi->map[F3D_G_ENDDL] = &GBI_F3D::endDl;
+             gbi->map[F3D_G_MOVEWORD] = &moveWord;
+diff --git a/src/gbi/rt64_gbi_s2dex.h b/src/gbi/rt64_gbi_s2dex.h
+index 8de11eb..dc5eec8 100644
+--- a/src/gbi/rt64_gbi_s2dex.h
++++ b/src/gbi/rt64_gbi_s2dex.h
+@@ -15,6 +15,12 @@
+ #define S2DEX_G_OBJ_LDTX_RECT 0xC3
+ #define S2DEX_G_OBJ_LDTX_RECT_R 0xC4
+ #define S2DEX_G_OBJ_RENDERMODE 0xB1
++#define S2DEX_G_OBJ_RECTANGLE 0x03
++#define S2DEX_G_OBJ_SPRITE 0x04
++#define S2DEX_G_OBJ_MOVEMEM 0x05
++#define S2DEX_G_OBJ_RECTANGLE_R 0xB2
++#define S2DEX_G_OBJ_FLAG_FLIPS 0x01
++#define S2DEX_G_OBJ_FLAG_FLIPT 0x10
+ #define S2DEX_G_BGLT_LOADBLOCK 0x0033
+ #define S2DEX_G_BGLT_LOADTILE 0xFFF4
+ #define S2DEX_G_BG_FLAG_FLIPS 0x01
+@@ -108,6 +114,10 @@ namespace RT64 {
+         void objLoadTxRect(State* state, DisplayList** dl);
+         void objLoadTxRectR(State* state, DisplayList** dl);
+         void rdpHalf0(State *state, DisplayList **dl);
++        void objRectangle(State *state, DisplayList **dl);
++        void objSprite(State *state, DisplayList **dl);
++        void objRectangleR(State *state, DisplayList **dl);
++        void objMovemem(State *state, DisplayList **dl);
+ 
+         void setup(GBI *gbi);
+     };
+diff --git a/src/hle/rt64_rsp.h b/src/hle/rt64_rsp.h
+index 61bb3b1..e934bd0 100644
+--- a/src/hle/rt64_rsp.h
++++ b/src/hle/rt64_rsp.h
+@@ -194,6 +194,13 @@ namespace RT64 {
+             std::array<uint32_t, 4> statuses;
+             // Seems to hold an id corresponding to the last command run.
+             int8_t data_02AE;
++            // 2D matrix loaded by G_OBJ_MOVEMEM (uObjMtx / uObjSubMtx), in
++            // floating point: A-D (s15.16), X/Y (s10.2) and the base scale (u5.10).
++            struct {
++                float A, B, C, D;
++                float X, Y;
++                float baseScaleX, baseScaleY;
++            } objMtx;
+         } S2D;
+ 
+         struct {

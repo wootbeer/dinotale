@@ -6,6 +6,58 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 8: blank Options screen -- RT64 was missing S2DEX sprite commands
+
+**Report (Windows, real GPU):** the menus work, but choosing Options gives a
+blank screen while the sound carries on. Reproduced on the Linux test setup.
+
+**Not the game.** The game kept running normally (about 30 buffer swaps a
+second). To check whether its logic had gone wrong, the original game was
+run in an emulator to the same screen and the two RDRAMs compared:
+- the boot-check values the game stored (`D_80108620` etc., `osCicId`, the
+  RDRAM words) are identical to the emulator's, so round 3's answers are
+  right;
+- the same overlays are resident at the same addresses, and the Options
+  screen's overlays (ROM 0xC622B0, 0xE15C80, 0xEAB730, 0xEAF270) match the
+  emulator word for word, code, data and bss;
+- the display lists for the frame are identical, command for command.
+
+**RT64.** The Options frame switches to the S2DEX 1.06 microcode
+(`G_LOAD_UCODE`, recognised by RT64: its text and data hashes match RT64's
+database) and draws with `G_OBJ_MOVEMEM`, `G_OBJ_LDTX_SPRITE` and
+`G_OBJ_LDTX_RECT_R`. RT64's S2DEX implementation (upstream too, as of this
+round) only had backgrounds and texture loads: the load-and-draw commands
+loaded the texture and stopped at a `TODO` / `assert(false)`, and
+`G_OBJ_RECTANGLE`, `G_OBJ_SPRITE`, `G_OBJ_RECTANGLE_R` and `G_OBJ_MOVEMEM`
+had no handlers. So nothing drawn with sprites appeared, here and in the
+levels.
+
+**Fix:** `lib-patches/rt64/0002-s2dex-object-sprites.patch` implements them:
+- `G_OBJ_MOVEMEM` loads the 2D matrix (`uObjMtx`, or `uObjSubMtx` for X, Y
+  and base scale);
+- `G_OBJ_RECTANGLE` draws a sprite at its own position and scale;
+- `G_OBJ_RECTANGLE_R` positions and scales it with the matrix's X/Y and base
+  scale;
+- `G_OBJ_SPRITE` applies the full matrix. It's drawn as a texture rectangle,
+  so scaling, mirroring (the game's matrix has D = -1) and translation are
+  right; rotation/shear are approximated by the bounding box for now;
+- the `G_OBJ_LDTX_*` commands now draw after loading.
+Each sets up the render tile from the `uObjSprite` the way the microcode
+does (clamped unless `G_OBJRM_NOTXCLAMP`) and draws a texture rectangle.
+
+**Result:** the Options chalkboard renders as in the emulator, the "Reveal
+Lucky Fruit" screen works, and levels now show Yoshi, fruit, coins, enemies
+and the HUD.
+
+**Still wrong in levels:** the background is black (and because nothing
+covers the frame, moving sprites leave trails), and the block tiles around
+the level show garbled textures. Next round.
+
+**Tooling:** a mupen64plus reference run (keyboard input works once its SDL
+input plugin is configured with `--set Input-SDL-Control1[...]`), with
+savestates read as RDRAM snapshots, and a gdb dump of the port's RDRAM at the
+same point.
+
 ## Round 7: Visual Studio didn't offer DinoTale.exe as a startup item
 
 The command-line build worked, but Visual Studio's green play button had no
