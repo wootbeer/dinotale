@@ -28,23 +28,17 @@ and leave the game's own behaviour, look and balance alone.
 - [x] Input (keyboard), main menu, Story Mode's opening scene (round 4)
 
 - [x] First level reached: Yoshi is controllable (round 5)
-- [x] Windows build instructions and packaging script (untested)
-- [x] Visual Studio setup: presets and a one-step setup script (untested)
+- [x] Windows build instructions and a one-step Visual Studio setup script
 
 - [x] Windows build runs on real hardware; menus work (round 7)
 - [x] S2DEX sprites implemented in RT64: Options screen, lucky fruit
       screen, sprites and HUD in levels (round 8)
 - [x] Level backgrounds and texture-load status in RT64 (round 9)
 - [x] Aspect ratio options: Original, Stretch, Hybrid (round 11)
-- [x] Expand: true widescreen with more play area (rounds 13-18); confirmed
-      on Windows
-- [x] Text box seams, screen-edge junk (rounds 12, 14, 17)
+- [x] Expand: true widescreen with more play area (rounds 13-22)
+- [x] Text box seams and shimmer, screen-edge junk (rounds 12, 14, 17, 22)
 
-## In progress
-
-- [ ] Rotated S2DEX sprites (drawn unrotated for now)
-
-## Next
+## Display
 
 - [x] Expand: HUD (fruit frame, health flower) at the window edges (round 23)
 - [x] HUD stays 4:3 in the other modes, also after switching mid-level (round 24)
@@ -53,12 +47,13 @@ and leave the game's own behaviour, look and balance alone.
 - [x] Hybrid: sides outside the 4:3 area dimmed (round 27)
 - [x] Expand: vertical scrolling streams full-width rows (round 28)
 - [x] Message box frame no longer stretches to the window mid-animation (round 29)
-- [ ] Expand: check vertically scrolling levels
-- [ ] Play through more levels in every aspect mode
 
-- [ ] Graphics, input, saves (EEPROM), audio
-- [ ] Widescreen, higher framerates
-- [ ] Windows release packaging
+## Next
+
+- [ ] Play through later pages and the boss fights in every aspect mode
+- [ ] Windows release build
+- [ ] Smoother motion: the Display refresh rate interpolates 3D only, and
+      this game is almost all 2D sprites and backgrounds
 
 ## Where things are
 

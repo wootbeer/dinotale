@@ -6,6 +6,21 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 30: pre-release cleanup (0.1.0)
+
+- **Privacy sweep:** every commit message, author and file in the published
+  history checked for personal details, session links, local paths, keys
+  and game data. Session links were removed from the history earlier; the
+  sweep found nothing else. No ROM, screenshot or extracted game file was
+  ever committed. `CLAUDE.md` records the rules for future commits.
+- **Code:** unused includes and a leftover variable removed from
+  `src/game/widescreen.cpp`; the health flower hook checks the actor before
+  reading the settings (it runs for every actor drawn).
+- **Docs:** README status and display options updated, a Playing section and
+  `CHANGELOG.md` added, PROGRESS tidied. Version 0.1.0.
+- **Packaging:** the release zip also carries `CHANGELOG.md`; SlotMap's
+  license notice path fixed (it lives in `slot_map.h`).
+
 ## Round 29: message box frame stretched to the window for a frame
 
 **Report:** when a message box opens, its wooden frame's top rail shoots out

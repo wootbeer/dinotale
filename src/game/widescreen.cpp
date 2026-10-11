@@ -1,6 +1,6 @@
 // True widescreen ("Expand" aspect ratio): the game's own view is made wider
 // so it streams and draws more of each level, instead of the picture being
-// stretched. See STATUS.md rounds 10, 13, 18 and 19.
+// stretched. See STATUS.md (Expand rounds, from 10 on).
 //
 // The wider view is set up when a level starts (its background layers and
 // camera are created with it), so it's fixed for the whole level: the width
@@ -9,11 +9,9 @@
 // running, Expand can't be chosen in the menu.
 
 #include <algorithm>
-#include <atomic>
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <vector>
 
 #include <SDL.h>
 
@@ -230,10 +228,9 @@ extern "C" void dinotale_bg_cover_outside(uint8_t* rdram, uint32_t rt, uint32_t 
 // the fruit Yoshi eats (ovl_128, func_80579F18(a0, frame, scale)). It reads
 // each slot's position from the frame object, x at +0x48 and y at +0xC0
 // (floats, 30 each, relative to the middle of the screen), and writes the
-// sprites. In Expand, spread
-// the slots across the wider screen just for that call: centres move away
-// from the middle in proportion, so the frame keeps its shape around the
-// edge of the window.
+// sprites. In Expand, spread the slots across the wider screen just for that
+// call: centres move away from the middle in proportion, so the frame keeps
+// its shape around the edge of the window.
 namespace {
     uint32_t fruit_frame = 0;
     float fruit_frame_x[30];
@@ -252,9 +249,7 @@ extern "C" void dinotale_fruit_frame_begin(uint8_t* rdram, uint32_t frame) {
         float &x = *reinterpret_cast<float*>(rdram + (frame + 0x48 + 4 * i - 0x80000000));
         fruit_frame_x[i] = x;
         // The slots' positions are relative to the middle of the screen.
-        const float middle = 0.0f;
-        const float centre = x + half_slot - middle;
-        x = middle + centre * scale - half_slot;
+        x = (x + half_slot) * scale - half_slot;
     }
     fruit_frame = frame;
 }
@@ -277,11 +272,7 @@ extern "C" void dinotale_fruit_frame_end(uint8_t* rdram) {
 // actor +0xB8) * actor +0xB4). In Expand, move the flower out to the left
 // edge of the wider screen by the extra margin.
 extern "C" void dinotale_hud_actor_screen_pos(uint8_t* rdram, recomp_context* ctx) {
-    const int32_t width = hud_view_width();
-    if (width == original_view_width) {
-        return;
-    }
-
+    // This runs for every actor drawn, so check for the flower first.
     const uint32_t actor = uint32_t(ctx->r6);
     const uint32_t x_address = *reinterpret_cast<uint32_t*>(rdram + (uint32_t(ctx->r29) + 0x18 - 0x80000000));
     if (((actor & 0xFF800000) != 0x80000000) || ((x_address & 0xFF800000) != 0x80000000)) {
@@ -290,6 +281,11 @@ extern "C" void dinotale_hud_actor_screen_pos(uint8_t* rdram, recomp_context* ct
 
     const uint16_t id = *reinterpret_cast<uint16_t*>(rdram + ((actor + 0xC) ^ 2) - 0x80000000);
     if ((id != 0x4010) && (id != 0x4011)) {
+        return;
+    }
+
+    const int32_t width = hud_view_width();
+    if (width == original_view_width) {
         return;
     }
 

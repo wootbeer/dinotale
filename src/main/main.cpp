@@ -60,7 +60,7 @@ void register_dinotale_overlays();
 
 static const std::string program_name = "DinoTale";
 static const std::u8string program_id = u8"dinotale";
-static const std::string version_string = "0.0.1";
+static const std::string version_string = "0.1.0";
 
 template <typename... Ts>
 [[noreturn]] static void exit_error(const char* fmt, Ts... args) {
@@ -479,8 +479,8 @@ int main(int argc, char** argv) {
         .get_game_thread_name = get_game_thread_name,
     };
 
-    // recompui's own default launcher menu is used -- no
-    // register_launcher_init_callback call here (see file-level comment).
+    // recompui's own default launcher menu is used, so there's no
+    // register_launcher_init_callback call here.
 
     recomp::start({
         .argc = argc,
