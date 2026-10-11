@@ -37,6 +37,14 @@ namespace {
     int live_bg_views = 0;
     int32_t level_view_width = original_view_width;
 
+    // When a background layer was last created or drawn (SDL ticks). A level
+    // draws its layers every frame, paused or not, so if a new layer is
+    // created after none were for a few seconds, the last level has ended;
+    // start counting afresh in case a way out of it didn't free all its
+    // layers.
+    uint64_t last_bg_ticks = 0;
+    constexpr uint64_t level_ended_ticks = 3000;
+
     bool expand_enabled() {
         return ultramodern::renderer::get_graphics_config().ar_option == ultramodern::renderer::AspectRatio::Expand;
     }
@@ -71,6 +79,15 @@ namespace {
         return (live_bg_views > 0) ? level_view_width : original_view_width;
     }
 
+    // The width the HUD and the camera's edge stop use: the level's, but only
+    // while Expand is selected. Switching to another mode in a level that
+    // started in Expand keeps the level's wider background (it's set up when
+    // the level starts), but the HUD and the camera go back to the 4:3 screen
+    // at once, so nothing ends up outside it.
+    int32_t active_view_width() {
+        return expand_enabled() ? current_view_width() : original_view_width;
+    }
+
     void update_expand_available() {
         // Outside a level anything goes; inside one, Expand only if the level
         // was started with it (switching away and back is fine then).
@@ -89,6 +106,11 @@ namespace {
 // The width of a level's view in pixels, for a background layer whose view
 // is `width` pixels wide on the N64 (320). Called as each layer is created.
 extern "C" int32_t dinotale_bg_view_width(uint8_t* rdram, int32_t width) {
+    const uint64_t now = SDL_GetTicks64();
+    if ((live_bg_views > 0) && (now - last_bg_ticks > level_ended_ticks)) {
+        live_bg_views = 0;
+    }
+    last_bg_ticks = now;
     if (live_bg_views == 0) {
         level_view_width = wanted_view_width();
     }
@@ -135,7 +157,7 @@ extern "C" void dinotale_bg_view_freed(uint8_t* rdram, uint32_t layer) {
 // left edge to its centre (func_8004FEC8, func_80058CC0). Returns the float
 // bits for the $at register.
 extern "C" uint32_t dinotale_camera_half_width_bits() {
-    return float_bits(float(current_view_width()) / 2.0f);
+    return float_bits(float(active_view_width()) / 2.0f);
 }
 
 // Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background
@@ -162,6 +184,8 @@ extern "C" void dinotale_bg_cover_outside(uint8_t* rdram, uint32_t rt, uint32_t 
     auto valid = [](uint32_t address) {
         return (address & 0xFF800000) == 0x80000000;
     };
+
+    last_bg_ticks = SDL_GetTicks64();
 
     if (!valid(rt) || !valid(obj)) {
         return;
@@ -198,7 +222,7 @@ namespace {
 
 extern "C" void dinotale_fruit_frame_begin(uint8_t* rdram, uint32_t frame) {
     fruit_frame = 0;
-    const int32_t width = current_view_width();
+    const int32_t width = active_view_width();
     if ((width == original_view_width) || ((frame & 0xFF800000) != 0x80000000)) {
         return;
     }
@@ -234,7 +258,7 @@ extern "C" void dinotale_fruit_frame_end(uint8_t* rdram) {
 // actor +0xB8) * actor +0xB4). In Expand, move the flower out to the left
 // edge of the wider screen by the extra margin.
 extern "C" void dinotale_hud_actor_screen_pos(uint8_t* rdram, recomp_context* ctx) {
-    const int32_t width = current_view_width();
+    const int32_t width = active_view_width();
     if (width == original_view_width) {
         return;
     }

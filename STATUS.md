@@ -6,6 +6,22 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 24: HUD back to 4:3 outside Expand
+
+**Report:** the widened HUD (round 23) showed in Original too.
+
+**Cause:** the HUD hooks (and the camera's edge stop) used the running
+level's view width, which is fixed when the level starts. A level started in
+Expand kept the wide HUD after switching to another mode.
+
+**Fix:** those hooks now use the level's width only while Expand is
+selected, and the 4:3 width otherwise, so switching mid-level puts the HUD
+back on the 4:3 screen at once. The level's wider background stays as it was
+set up. Also a safeguard for the layer count that fixes the width for each
+level: if a new layer is created after none were created or drawn for 3
+seconds, the previous level has ended, so counting starts again. Then a
+level left some other way can't carry its width into the next one.
+
 ## Round 23: Expand, HUD at the window edges
 
 Yoshi's Story's in-level HUD is the fruit frame (30 slots around the edge of

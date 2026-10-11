@@ -47,6 +47,7 @@ and leave the game's own behaviour, look and balance alone.
 ## Next
 
 - [x] Expand: HUD (fruit frame, health flower) at the window edges (round 23)
+- [x] HUD stays 4:3 in the other modes, also after switching mid-level (round 24)
 - [ ] Expand: check vertically scrolling levels
 - [ ] Play through more levels in every aspect mode
 
