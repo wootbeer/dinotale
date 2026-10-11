@@ -6,6 +6,28 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 15: Expand, mirrored strip on the right
+
+**Report:** in Expand the right-hand strip of the far background looked
+mirrored; hills scrolled in from the wrong direction.
+
+**Cause:** painting marker stripes into the background buffer showed the
+strip was a true mirror image around the old 4:3 right edge. RT64 works out
+how much of a texture a rectangle samples, clipped to the scissor, and
+uploads only that much as a GPU texture. The widened scissor still stored
+its 4:3 coordinates (the extension comes from its extended-GBI origin), so
+the texture was cut off at the 4:3 edge, and the tile's mirror addressing
+reflected it from there.
+
+**Fix** (`rt64/0009`): a scissor edge with an extended origin no longer
+limits the sampling range.
+
+**Still open:** at a level's left end, Expand shows unfilled buffer (the
+camera limit is the 4:3 one). The camera code is in `frameManager`
+(0x80058CC0-0x8005AA68), which also holds the 4:3 constants
+(`D_800B0B90`-`D_800B0BA0`, 1.3333) used by the on-screen checks for
+objects: those will widen sprite/enemy culling.
+
 ## Round 14: junk on the top/left edge
 
 **Report:** in levels the top row and left column of the screen show

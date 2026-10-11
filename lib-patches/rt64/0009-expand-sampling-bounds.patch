@@ -1,0 +1,30 @@
+diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
+index d5e6557..603b622 100644
+--- a/src/hle/rt64_rdp.cpp
++++ b/src/hle/rt64_rdp.cpp
+@@ -1311,9 +1311,23 @@ namespace RT64 {
+ 
+         // Update the tracked texcoords for the used tiles. Use scissor intersection to figure out 
+         // what the bounds of the real sampling will be if necessary.
+-        const bool computeIntersection = !scissorRect.isNull() && !scissorRect.fullyInside(drawRect);
++        // DinoTale: a scissor edge anchored to the window with an extended-GBI origin reaches past its stored
++        // 4:3 coordinate, so it can't bound the sampling there. Without this, a background drawn past the 4:3
++        // edge in Expand got a texture cut off at that edge, which the sampler then mirrored.
++        FixedRect samplingScissor = scissorRect;
++        if (!samplingScissor.isNull()) {
++            if (extended.scissorLeftOriginStack[scissorStackSize - 1] != G_EX_ORIGIN_NONE) {
++                samplingScissor.ulx = std::min(samplingScissor.ulx, drawRect.ulx);
++            }
++
++            if (extended.scissorRightOriginStack[scissorStackSize - 1] != G_EX_ORIGIN_NONE) {
++                samplingScissor.lrx = std::max(samplingScissor.lrx, drawRect.lrx);
++            }
++        }
++
++        const bool computeIntersection = !samplingScissor.isNull() && !samplingScissor.fullyInside(drawRect);
+         if (computeIntersection) {
+-            const FixedRect intersectionRect = scissorRect.intersection(drawRect);
++            const FixedRect intersectionRect = samplingScissor.intersection(drawRect);
+             if (!intersectionRect.isNull()) {
+                 const int32_t leftPixels = intersectionRect.left(true) - drawRect.left(true);
+                 const int32_t topPixels = intersectionRect.top(true) - drawRect.top(true);
