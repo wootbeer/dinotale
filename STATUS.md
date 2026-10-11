@@ -6,6 +6,37 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 13: Expand, first part of true widescreen (backgrounds)
+
+**Background buffers.** `func_8004F2B0` (bgManager) creates each level's
+background view with a width and height from the level data (320x238) and
+passes them to `func_8004EEEC`. That allocates the layer's ring buffer as
+(width + 16) x (height + 18) and records the view size, which everything
+downstream uses: the camera window (`func_8004F44C`: centre +/- size/2), the
+tile streamer, the ring wrap (`func_800734F0`), and the `uObjBg` that
+`func_8007D5E0` builds (frame width = view width, frame x = centre - width/2).
+A hook just before the call (`yoshisstory.us.toml`) widens the view in Expand
+(`src/game/widescreen.cpp`: the window's aspect, capped at 16:9 for now, in
+whole 16-pixel columns, so 432 for 16:9). The game then streams and draws a
+432-pixel view centred on the original 320 one; Original and the other modes
+pass the width through unchanged.
+
+**RT64** (`rt64/0007`), in Expand:
+
+- A scissor over the whole 320-wide screen is anchored to the window edges
+  with extended-GBI origins, and `G_BG_1CYC` no longer cuts the frame to the
+  4:3 scissor horizontally.
+- Backgrounds keep their shape (`G_EX_ASPECT_ADJUST`) instead of being
+  stretched as full-screen rectangles.
+- The extended-origin aspect is forced to the full window, since
+  the widened scissor depends on it.
+
+**Result:** all three parallax layers fill a 16:9 window with real level
+scenery. Still to do: sprites and enemies are only drawn inside the 4:3 area
+(the game culls them at the old screen edges), and at a level's left end the
+far layers show a strip of black because the camera limit is still the 4:3
+one.
+
 ## Round 12: text box strips (S2DEX SHRINKSIZE)
 
 **Report:** lines flicker in the text of message boxes while it scrolls.
@@ -49,7 +80,7 @@ reproduced here at 1x or 3x yet.
   and hidden until it works; a config that already says Expand behaves like
   Hybrid for now.
 
-Patches: `rt64/0005`, `N64ModernRuntime/0002`, `RecompFrontend/0001`.
+Patches: `rt64/0005`, `N64ModernRuntime/0002`, `RecompFrontend/0001` (aspect ratio options).
 
 **The thin line at the top/left edge** in levels is the original game: the
 sky layer starts one pixel in, so the layer behind shows through. The

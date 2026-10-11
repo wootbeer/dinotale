@@ -127,3 +127,12 @@ value = 0x00000000
 func = "func_800035F8"
 vram = 0x80003624
 value = 0x00000000
+
+# True widescreen (Expand): a level's background layers are created with the
+# view width from the level data (320). Widen it before func_8004EEEC
+# allocates each layer's ring buffer and records the view size; the streamer,
+# the camera window and the background draw all follow that size.
+[[patches.hook]]
+func = "func_8004F2B0"
+before_vram = 0x8004F34C
+text = "ctx->r4 = (gpr)(int32_t)dinotale_bg_view_width((int32_t)ctx->r4);"

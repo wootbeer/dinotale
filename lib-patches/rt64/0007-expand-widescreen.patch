@@ -1,0 +1,76 @@
+diff --git a/src/common/rt64_user_configuration.h b/src/common/rt64_user_configuration.h
+index 3e0f5a7..b953f05 100644
+--- a/src/common/rt64_user_configuration.h
++++ b/src/common/rt64_user_configuration.h
+@@ -98,6 +98,9 @@ namespace RT64 {
+         bool stretchToWindow = false;
+         // DinoTale: stretch S2DEX backgrounds to the full width in a wider aspect ratio.
+         bool stretchBackgrounds = false;
++        // DinoTale "Expand": the game draws a wider view, so a scissor covering the whole 4:3 screen is
++        // widened to the window and backgrounds are drawn at their own size instead of stretched.
++        bool extendScreen = false;
+         Upscale2D upscale2D;
+         bool threePointFiltering;
+         RefreshRate refreshRate;
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index d310274..a7274c3 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -141,8 +141,14 @@ namespace RT64 {
+             RDP *rdp;
+             uint8_t previous;
+             BgStretchScope(State *state) : rdp(state->rdp.get()), previous(rdp->extended.global.rectAspect) {
+-                if (state->ext.userConfig->stretchBackgrounds && (previous == G_EX_ASPECT_AUTO)) {
+-                    rdp->extended.global.rectAspect = G_EX_ASPECT_STRETCH;
++                if (previous == G_EX_ASPECT_AUTO) {
++                    if (state->ext.userConfig->extendScreen) {
++                        // Expand: the game draws a background as wide as the view, so keep its shape.
++                        rdp->extended.global.rectAspect = G_EX_ASPECT_ADJUST;
++                    }
++                    else if (state->ext.userConfig->stretchBackgrounds) {
++                        rdp->extended.global.rectAspect = G_EX_ASPECT_STRETCH;
++                    }
+                 }
+             }
+             ~BgStretchScope() {
+@@ -201,6 +207,17 @@ namespace RT64 {
+             int32_t scissorY0 = scissorRect.uly;
+             int32_t scissorX1 = scissorRect.lrx;
+             int32_t scissorY1 = scissorRect.lry;
++
++            // DinoTale: a scissor widened to the window edges (Expand) doesn't cut the frame
++            // horizontally; the renderer clips it to the window instead.
++            if (rdp->extended.scissorLeftOriginStack[rdp->scissorStackSize - 1] == G_EX_ORIGIN_LEFT) {
++                scissorX0 = std::min(scissorX0, int32_t(frameX0));
++            }
++
++            if (rdp->extended.scissorRightOriginStack[rdp->scissorStackSize - 1] == G_EX_ORIGIN_RIGHT) {
++                scissorX1 = std::max(scissorX1, int32_t(frameX0) + frameW);
++            }
++
+             int16_t pixX0 = int16_t(std::max(scissorX0 - frameX0, 0));
+             int16_t pixY0 = int16_t(std::max(scissorY0 - frameY0, 0));
+             int16_t pixX1 = int16_t(std::max(frameW - scissorX1 + frameX0, 0));
+diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
+index 5efdad1..d5e6557 100644
+--- a/src/hle/rt64_rdp.cpp
++++ b/src/hle/rt64_rdp.cpp
+@@ -976,6 +976,18 @@ namespace RT64 {
+     }
+ 
+     void RDP::setScissor(uint8_t mode, int32_t ulx, int32_t uly, int32_t lrx, int32_t lry) {
++        // DinoTale: in Expand, a scissor over the whole 4:3 screen covers the whole window instead.
++        const ExtendedAlignment &global = extended.global.scissor;
++        const bool defaultAlignment = (global.leftOrigin == G_EX_ORIGIN_NONE) && (global.rightOrigin == G_EX_ORIGIN_NONE);
++        const bool screenTarget = (colorImage.width == 320);
++        if (state->ext.userConfig->extendScreen && defaultAlignment && screenTarget && (ulx <= 0) && (lrx >= int32_t(colorImage.width) * 4)) {
++            ExtendedAlignment wide = global;
++            wide.leftOrigin = G_EX_ORIGIN_LEFT;
++            wide.rightOrigin = G_EX_ORIGIN_RIGHT;
++            setScissor(mode, 0, uly, 0, lry, wide);
++            return;
++        }
++
+         setScissor(mode, ulx, uly, lrx, lry, extended.global.scissor);
+     }
+     

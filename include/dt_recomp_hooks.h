@@ -20,4 +20,7 @@ void dinotale_crash_note_rdram(uint8_t* rdram);
 // lib/RecompFrontend/recompui/src/api/ui_api_events.cpp
 void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 
+// src/game/widescreen.cpp
+int32_t dinotale_bg_view_width(int32_t width);
+
 #endif // DT_RECOMP_HOOKS_H
