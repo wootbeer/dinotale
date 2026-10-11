@@ -6,6 +6,19 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 7: Visual Studio didn't offer DinoTale.exe as a startup item
+
+The command-line build worked, but Visual Studio's green play button had no
+DinoTale.exe. Visual Studio configures the preset itself, in its own
+environment, and the presets named the compiler only as `clang-cl`, which
+that environment doesn't reliably put on PATH (the setup script does it
+itself, which is why its build worked). With the configure failing, Visual
+Studio has no targets to offer. The presets now give the full path,
+`$env{VCINSTALLDIR}Tools/Llvm/x64/bin/clang-cl.exe`; `VCINSTALLDIR` is set
+in Visual Studio's own environment and in the developer shell the setup
+script starts. The same path also avoids the 32-bit-hosted clang-cl that
+caused trouble in the BattleTanx port.
+
 ## Round 6: Visual Studio setup
 
 For building and debugging locally on Windows:

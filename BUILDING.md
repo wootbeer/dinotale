@@ -23,6 +23,10 @@ After pulling changes, run `.\tools\setup-windows.ps1` again (no `-Rom`
 needed) to regenerate the recompiled code, or just rebuild in Visual Studio
 if only `src\` changed. `-Icon <png>` replaces the app icon.
 
+If DinoTale.exe doesn't appear in the startup item list, Visual Studio's
+own CMake configure failed: check View > Output > "CMake", then try
+Project > Delete Cache and Reconfigure.
+
 The rest of this guide is the same process step by step.
 
 You need your own copy of the game: Yoshi's Story, USA (see README.md for
