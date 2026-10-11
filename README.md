@@ -1,18 +1,41 @@
-# DinoTale: Yoshi's Story Recompiled (work in progress)
+# DinoTale: Yoshi's Story Recompiled
 
-A native PC port of Yoshi's Story (N64, 1997/98), made by statically
-recompiling the game with [N64Recomp](https://github.com/N64Recomp/N64Recomp)
-and running it on [N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime)
-with [RT64](https://github.com/rt64/rt64) for rendering. Windows first.
+Yoshi's Story (N64, 1997/98), running natively on PC. The game is statically
+recompiled with [N64Recomp](https://github.com/N64Recomp/N64Recomp), runs on
+[N64ModernRuntime](https://github.com/N64Recomp/N64ModernRuntime) and is
+rendered with [RT64](https://github.com/rt64/rt64). For Windows and Linux,
+including the Steam Deck.
 
-Unofficial, and not affiliated with the rights holders. **No game data is
-included.** You need your own dump of the game to build or play this; the
-game asks you for it on first launch.
+Unofficial, and not affiliated with the rights holders. **No game files are
+included:** you need your own copy of the game.
 
-**Status: playable, still being tested.** The game boots, plays and saves;
-levels are being played through in every display mode to find what's left.
-Progress is tracked in the open: [PROGRESS.md](PROGRESS.md) is the short
-version, [STATUS.md](STATUS.md) the full working log.
+## Features
+
+- Runs natively on Windows and Linux.
+- **Widescreen:** play in 4:3, stretched, or true widescreen (Expand) that
+  shows more of each level, up to 16:9.
+- HUD at the edges of the window in widescreen, or kept in its original place.
+- Keyboard and controller support with remappable controls.
+- Saves and sound.
+
+## Download and play
+
+Get the latest build from
+[Releases](https://github.com/wootbeer/dinotale/releases):
+
+- **Windows:** unzip it anywhere and run `DinoTale.exe`.
+- **Linux / Steam Deck:** extract the `.tar.gz` and run `DinoTale`. On the
+  Deck, run it from Desktop Mode, or add it to Steam as a non-Steam game to
+  play in Game Mode.
+
+On first launch, pick your copy of the game. It's checked against the hash
+below and never modified. Settings (graphics, controls, sound) are in the
+in-game menu.
+
+### Game files
+
+Yoshi's Story (USA) (En,Ja). Any byte order (`.z64`, `.n64`, `.v64`) works.
+SHA-1 of the `.z64`: `B13072FEF6C6DF48C07D8822C01E5BC59036F6DA`
 
 ## Display options
 
@@ -22,36 +45,21 @@ Settings > Graphics > Aspect Ratio:
 - **Stretch:** the 4:3 picture stretched to fill the window.
 - **Hybrid:** backgrounds stretched to the window, sprites kept in shape in
   the middle 4:3 area; the stretched sides are dimmed.
-- **Expand:** true widescreen (up to 16:9). The game shows more of each
-  level. Choose it before starting a level. HUD Placement sets whether the
-  HUD moves out to the window edges.
+- **Expand:** true widescreen. The game shows more of each level. Choose it
+  before starting a level. HUD Placement sets whether the HUD moves out to
+  the window edges.
 
-## Game files
+## Reporting issues
 
-Yoshi's Story (USA) (En,Ja). Any byte order (`.z64`, `.n64`, `.v64`) works.
-SHA-1 of the big-endian `.z64`:
-`B13072FEF6C6DF48C07D8822C01E5BC59036F6DA`
-(`tools/normalize_rom.py` converts other byte orders and prints the header.)
+Found something wrong? Open an
+[issue](https://github.com/wootbeer/dinotale/issues) with a screenshot, the
+level and roughly where it happened, and which aspect ratio you were using.
 
-## Playing
+## Building from source
 
-Download the latest build from
-[Releases](https://github.com/wootbeer/dinotale/releases):
-
-- **Windows:** unzip it anywhere and run `DinoTale.exe`.
-- **Linux / Steam Deck:** extract the `.tar.gz` and run `DinoTale` (on the
-  Deck, from Desktop Mode; add it to Steam as a non-Steam game to play it in
-  Game Mode).
-
-On first launch, pick your copy of the game; it's
-checked against the hash above and never modified. Settings (graphics,
-controls, sound) are in the in-game menu.
-
-What changed in each version: [CHANGELOG.md](CHANGELOG.md).
-
-## Building
-
-See [BUILDING.md](BUILDING.md).
+See [BUILDING.md](BUILDING.md). What changed in each version is in
+[CHANGELOG.md](CHANGELOG.md); [STATUS.md](STATUS.md) is the full development
+log.
 
 ## Credits
 
