@@ -6,6 +6,24 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 14: junk on the top/left edge
+
+**Report:** in levels the top row and left column of the screen show
+coloured junk that changes, rather than looking like part of the storybook.
+
+**Cause:** in levels the game never draws those pixels. The sky layer starts
+one pixel in from the top-left, and the layers in front of it have
+transparent areas there, so the framebuffer keeps whatever was left in it.
+On a TV they were in the overscan.
+
+**Fix** (`rt64/0008`): the final output masks the top row and left column
+to black.
+
+**Expand, at a level's left end:** the extra width there reaches past the
+level's start, where the game never streams background columns, so those
+buffer columns still hold whatever an earlier scroll left. That goes away
+once the camera limits account for the wider view (next).
+
 ## Round 13: Expand, first part of true widescreen (backgrounds)
 
 **Background buffers.** `func_8004F2B0` (bgManager) creates each level's
