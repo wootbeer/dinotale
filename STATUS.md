@@ -17,7 +17,7 @@ the window while sprites keep their shape, so the sprites stay in the middle
 show their part of the level already. (Expand is the mode with a wider view.)
 
 **Change** (`rt64/0015`): in Hybrid the final picture's sides outside the
-4:3 area are dimmed (to 45%), so they fill the window without drawing the
+4:3 area are dimmed (to 25%), so they fill the window without drawing the
 eye. The HUD stays inside the 4:3 area in Hybrid (HUD Placement only spreads
 it in Expand), so it's never dimmed. The Hybrid description in the menu says
 so (`RecompFrontend/0001`).

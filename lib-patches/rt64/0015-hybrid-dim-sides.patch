@@ -40,7 +40,7 @@ index 88b2de6..92bebd5 100644
 +            // The game's screen is 4:3 in the middle of the widened picture.
 +            const float pictureAspect = float(pushConstants.videoResolution.x) / float(pushConstants.videoResolution.y);
 +            pushConstants.centerFraction = std::min((4.0f / 3.0f) / pictureAspect, 1.0f);
-+            pushConstants.sideBrightness = 0.45f;
++            pushConstants.sideBrightness = 0.25f;
 +        }
  
          p.commandList->setPipeline(shader->pipeline.get());
