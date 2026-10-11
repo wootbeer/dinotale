@@ -1,0 +1,45 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index cc4de5c..d310274 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -648,10 +648,36 @@ namespace RT64 {
+             const float stepT = o.imageH / height;
+             int16_t dsdx = int16_t(std::lround(stepS * 1024.0f));
+             int16_t dtdy = int16_t(std::lround(stepT * 1024.0f));
+-            int16_t uls = 0;
+-            int16_t ult = 0;
+-            if (flipS) { uls = int16_t(std::lround(o.imageW * 32.0f)) - 1; dsdx = -dsdx; }
+-            if (flipT) { ult = int16_t(std::lround(o.imageH * 32.0f)) - 1; dtdy = -dtdy; }
++
++            // G_OBJRM_SHRINKSIZE_1/2 trim half a texel / one texel off every edge, so bilinear
++            // filtering never blends in texels from outside the sprite. Games that draw a large
++            // image in TMEM-sized strips overlap the strips by a texel and rely on this trim for
++            // a seamless join (Yoshi's Story's text boxes); without it each join leaves a line.
++            float shrink = 0.0f;
++            if (objRenderMode & S2DEX_G_OBJRM_SHRINKSIZE_2) {
++                shrink = 1.0f;
++            }
++            else if (objRenderMode & S2DEX_G_OBJRM_SHRINKSIZE_1) {
++                shrink = 0.5f;
++            }
++
++            if (shrink > 0.0f) {
++                const float insetX = shrink / stepS;
++                const float insetY = shrink / stepT;
++                if (((x1 - x0) <= 2.0f * insetX) || ((y1 - y0) <= 2.0f * insetY)) {
++                    return;
++                }
++
++                x0 += insetX;
++                x1 -= insetX;
++                y0 += insetY;
++                y1 -= insetY;
++            }
++
++            int16_t uls = int16_t(std::lround(shrink * 32.0f));
++            int16_t ult = int16_t(std::lround(shrink * 32.0f));
++            if (flipS) { uls = int16_t(std::lround((o.imageW - shrink) * 32.0f)) - 1; dsdx = -dsdx; }
++            if (flipT) { ult = int16_t(std::lround((o.imageH - shrink) * 32.0f)) - 1; dtdy = -dtdy; }
+ 
+             const int32_t ulx = int32_t(std::lround(x0 * 4.0f));
+             const int32_t uly = int32_t(std::lround(y0 * 4.0f));

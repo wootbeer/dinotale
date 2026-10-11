@@ -6,6 +6,31 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 12: text box strips (S2DEX SHRINKSIZE)
+
+**Report:** lines flicker in the text of message boxes while it scrolls.
+
+**Findings.** A message box's text is one 256x82 4-bit intensity image that
+the game redraws as the text scrolls. The lines entering and leaving at the
+edges are squashed on purpose, like text on a rolling drum. The image goes to
+the screen as several `G_OBJ_RECTANGLE_R` strips of 32 rows (one TMEM load
+each), scaled to about 0.7-0.85x, with bilinear filtering and
+`G_OBJRM_SHRINKSIZE_1`. The strips overlap by one texel row. SHRINKSIZE trims
+half a texel off each edge of each strip so that bilinear filtering never
+blends with texels outside the strip, which makes the joins seamless. RT64's
+new object code ignored it, so each join drew a one-pixel band whose blend
+was wrong, at a fixed height, with the text scrolling through it.
+
+**Fix** (`rt64/0006`): `G_OBJRM_SHRINKSIZE_1`/`_2` inset the sprite by
+half a texel / one texel on every side, in both the screen rectangle and the
+texture coordinates.
+
+**Top line in levels:** on the reporter's machine the top screen row in
+levels shows coloured pixels instead of black. Each background layer is a
+ring buffer that also wraps vertically, and the sky layer starts one pixel
+down, so the row is at the very edge of what the game draws. It isn't
+reproduced here at 1x or 3x yet.
+
 ## Round 11: aspect ratio options (Stretch, Hybrid) and patch handling
 
 **Aspect ratio options.** Settings > Graphics > Aspect Ratio now offers:
