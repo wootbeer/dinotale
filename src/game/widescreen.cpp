@@ -19,6 +19,7 @@
 
 #include "ultramodern/config.hpp"
 #include "recompui/config.h"
+#include "recomp.h"
 
 // src/main/main.cpp
 extern SDL_Window* window;
@@ -135,4 +136,49 @@ extern "C" void dinotale_bg_view_freed(uint8_t* rdram, uint32_t layer) {
 // bits for the $at register.
 extern "C" uint32_t dinotale_camera_half_width_bits() {
     return float_bits(float(current_view_width()) / 2.0f);
+}
+
+// Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background
+// image to cover with black when it's drawn.
+extern "C" void rt64_dinotale_set_bg_left_mask(uint32_t address, int32_t columns);
+
+// Called just before a background layer is drawn (func_8005F5D0 and
+// func_8005F690, before their func_8007DB34 call), with the layer's render
+// target and view object.
+//
+// At a level's left end the wider view reaches left of the layer's art. The
+// game doesn't stream art there, so the layer would show whatever its ring
+// buffer last held in those columns, which looks like junk. Tell the
+// renderer to cover that strip of this layer with black. Layers are drawn
+// back to front and the far ones reach further left, so each covers only its
+// own junk.
+//
+// View object +0x18: the view's left x in the layer (float, unwrapped).
+// Render target +0x0: the ring buffer, the image the layer is drawn from.
+extern "C" void dinotale_bg_cover_outside(uint8_t* rdram, uint32_t rt, uint32_t obj) {
+    auto word = [&](uint32_t address) -> uint32_t& {
+        return *reinterpret_cast<uint32_t*>(rdram + (address - 0x80000000));
+    };
+    auto valid = [](uint32_t address) {
+        return (address & 0xFF800000) == 0x80000000;
+    };
+
+    if (!valid(rt) || !valid(obj)) {
+        return;
+    }
+
+    const uint32_t buffer = word(rt + 0x0);
+    if (!valid(buffer)) {
+        return;
+    }
+
+    int32_t columns = 0;
+    if (current_view_width() != original_view_width) {
+        const float left = *reinterpret_cast<float*>(&word(obj + 0x18));
+        if (left < 0.0f) {
+            columns = std::min(int32_t(std::ceil(-left)), current_view_width());
+        }
+    }
+
+    rt64_dinotale_set_bg_left_mask(buffer, columns);
 }

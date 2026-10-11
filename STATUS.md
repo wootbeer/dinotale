@@ -6,6 +6,25 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 21: Expand, black edge at a level's start
+
+**Report:** walking back to a level's start in Expand, the strip past the
+level's left end filled with junk again (the start itself was black).
+
+**Cause:** each layer's view reaches left of the layer's art there. The game
+streams no art for those columns, so they keep whatever the ring buffer held
+from further along the level. Clearing those ring columns from the CPU, or
+with an RDP fill in the game's display list, reached RDRAM but not the
+screen, because RT64 keeps its own copy of the ring.
+
+**Fix:** before each layer is drawn, a hook (`func_8005F5D0` / `func_8005F690`,
+before `func_8007DB34`) works out how many of its columns lie left of the art
+(`-left` from the view object's `+0x18`) and passes that to our RT64 patch by
+the layer's image address. When RT64 draws that background it fills the
+strip with black (`rt64/0012`, `BgLeftMask`). Layers draw back to front and
+the far ones reach further left, so each covers only its own junk. The level
+start and walking back both show a clean black edge, the storybook look.
+
 ## Round 20: Expand, objects shifted (round 18 reverted)
 
 **Report:** in Expand everything the game positions itself was shifted right

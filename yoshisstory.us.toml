@@ -160,3 +160,18 @@ text = "dinotale_bg_view_created(rdram, (uint32_t)ctx->r2);"
 func = "func_8004F38C"
 before_vram = 0x8004F38C
 text = "dinotale_bg_view_freed(rdram, (uint32_t)ctx->r4);"
+
+# Expand: before a background layer is drawn, tell the renderer how much of
+# it lies left of the layer's art (the wider view reaches past it at a level's
+# start), to cover with black; see src/game/widescreen.cpp. Both draw paths:
+# after streaming (func_8005F5D0: target in $s1, view object in $s0) and
+# without (func_8005F690: target at sp+0x20, view object at sp+0x24).
+[[patches.hook]]
+func = "func_8005F5D0"
+before_vram = 0x8005F658
+text = "dinotale_bg_cover_outside(rdram, (uint32_t)ctx->r17, (uint32_t)ctx->r16);"
+
+[[patches.hook]]
+func = "func_8005F690"
+before_vram = 0x8005F6DC
+text = "dinotale_bg_cover_outside(rdram, (uint32_t)MEM_W(0x20, ctx->r29), (uint32_t)MEM_W(0x24, ctx->r29));"

@@ -1,0 +1,108 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index a7274c3..c35c698 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -5,6 +5,8 @@
+ #include "rt64_gbi_s2dex.h"
+ 
+ #include <algorithm>
++#include <array>
++#include <mutex>
+ #include <cmath>
+ #include <cstring>
+ 
+@@ -156,6 +158,56 @@ namespace RT64 {
+             }
+         };
+ 
++        // DinoTale (Expand): columns at the left of a background image that the game has no art for, by
++        // image address (set by the game hooks in src/game/widescreen.cpp, read here on the renderer's
++        // thread). After the background is drawn, that strip of the screen is filled with black.
++        struct BgLeftMask {
++            uint32_t address = 0;
++            int32_t columns = 0;
++        };
++
++        static std::mutex bgLeftMaskMutex;
++        static std::array<BgLeftMask, 8> bgLeftMasks;
++
++        static int32_t bgLeftMaskColumns(uint32_t address) {
++            std::scoped_lock lock(bgLeftMaskMutex);
++            for (const BgLeftMask &mask : bgLeftMasks) {
++                if (mask.address == (address & 0xFFFFFF)) {
++                    return mask.columns;
++                }
++            }
++
++            return 0;
++        }
++
++        struct BgLeftMaskScope {
++            State *state;
++            int32_t ulx, uly, lrx, lry;
++            BgLeftMaskScope(State *state, const uObjScaleBg_t &scaleBg) : state(state) {
++                const int32_t columns = bgLeftMaskColumns(state->rsp->fromSegmented(scaleBg.imageAddress));
++                ulx = scaleBg.frameX;
++                uly = scaleBg.frameY;
++                lrx = ulx + std::min(columns * 4, int32_t(scaleBg.frameW));
++                lry = uly + scaleBg.frameH;
++            }
++
++            ~BgLeftMaskScope() {
++                if (lrx <= ulx) {
++                    return;
++                }
++
++                RDP *rdp = state->rdp.get();
++                const uint32_t savedH = rdp->otherMode.H;
++                const uint32_t savedL = rdp->otherMode.L;
++                const uint32_t savedFill = rdp->fillColorStack[rdp->fillColorStackSize - 1];
++                rdp->setOtherMode((savedH & ~(3U << G_MDSFT_CYCLETYPE)) | G_CYC_FILL, 0);
++                rdp->setFillColor(0x00010001);
++                rdp->fillRect(ulx, uly, lrx - 1, lry - 1);
++                rdp->setFillColor(savedFill);
++                rdp->setOtherMode(savedH, savedL);
++            }
++        };
++
+         void bg1Cyc(State *state, DisplayList **dl) {
+             BgStretchScope bgStretchScope(state);
+ #       ifdef LOG_BGRECT_METHODS
+@@ -169,6 +221,7 @@ namespace RT64 {
+             const uObjBg *bgObject = reinterpret_cast<const uObjBg *>(state->fromRDRAM(rdramAddress));
+             const uObjBg_t &bg = bgObject->bg;
+             const uObjScaleBg_t &scaleBg = bgObject->scaleBg;
++            BgLeftMaskScope bgLeftMaskScope(state, scaleBg);
+ 
+             // Validate the image loading method is one of the two supported methods. It's worth noting 
+             // that despite the load block method being documented, it doesn't actually work in the retail
+@@ -915,4 +968,27 @@ namespace RT64 {
+             gbi->resetFromLoad = &reset;
+         }
+     }
+-};
+\ No newline at end of file
++};
++
++// DinoTale: see BgLeftMask. Called from the game thread.
++extern "C" void rt64_dinotale_set_bg_left_mask(uint32_t address, int32_t columns) {
++    using namespace RT64::GBI_S2DEX;
++    std::scoped_lock lock(bgLeftMaskMutex);
++    address &= 0xFFFFFF;
++    BgLeftMask *freeSlot = nullptr;
++    for (BgLeftMask &mask : bgLeftMasks) {
++        if (mask.address == address) {
++            mask.columns = columns;
++            return;
++        }
++
++        if ((freeSlot == nullptr) && ((mask.address == 0) || (mask.columns == 0))) {
++            freeSlot = &mask;
++        }
++    }
++
++    if ((freeSlot != nullptr) && (columns > 0)) {
++        freeSlot->address = address;
++        freeSlot->columns = columns;
++    }
++}
