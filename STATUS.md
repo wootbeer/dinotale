@@ -6,6 +6,17 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 25: HUD Placement setting with Expand
+
+**Report:** Expand with HUD Placement set to Original still put the HUD at
+the window edges.
+
+**Fix:** the HUD hooks (round 23) now follow the existing HUD Placement
+setting. **Original** keeps the fruit frame and health flower on the middle
+4:3 part of the screen, while the background still uses the wider view.
+**16:9** and **Expand** put them at the window edges; the view is at most
+16:9 wide, so the two are the same.
+
 ## Round 24: HUD back to 4:3 outside Expand
 
 **Report:** the widened HUD (round 23) showed in Original too.

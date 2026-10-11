@@ -88,6 +88,16 @@ namespace {
         return expand_enabled() ? current_view_width() : original_view_width;
     }
 
+    // The width the HUD is laid out for: as above, but kept to the middle 4:3
+    // part of the screen when HUD Placement is Original. (The view is at most
+    // 16:9, so the 16:9 and Expand placements are the same.)
+    int32_t hud_view_width() {
+        if (ultramodern::renderer::get_graphics_config().hr_option == ultramodern::renderer::HUDRatioMode::Original) {
+            return original_view_width;
+        }
+        return active_view_width();
+    }
+
     void update_expand_available() {
         // Outside a level anything goes; inside one, Expand only if the level
         // was started with it (switching away and back is fine then).
@@ -222,7 +232,7 @@ namespace {
 
 extern "C" void dinotale_fruit_frame_begin(uint8_t* rdram, uint32_t frame) {
     fruit_frame = 0;
-    const int32_t width = active_view_width();
+    const int32_t width = hud_view_width();
     if ((width == original_view_width) || ((frame & 0xFF800000) != 0x80000000)) {
         return;
     }
@@ -258,7 +268,7 @@ extern "C" void dinotale_fruit_frame_end(uint8_t* rdram) {
 // actor +0xB8) * actor +0xB4). In Expand, move the flower out to the left
 // edge of the wider screen by the extra margin.
 extern "C" void dinotale_hud_actor_screen_pos(uint8_t* rdram, recomp_context* ctx) {
-    const int32_t width = active_view_width();
+    const int32_t width = hud_view_width();
     if (width == original_view_width) {
         return;
     }
