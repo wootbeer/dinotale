@@ -1,0 +1,16 @@
+diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
+index 9fae0d4..9d58098 100644
+--- a/src/render/rt64_framebuffer_renderer.cpp
++++ b/src/render/rt64_framebuffer_renderer.cpp
+@@ -1678,6 +1678,11 @@ namespace RT64 {
+ 
+                         triangles.scissor = convertFixedRect(call.callDesc.scissorRect, p.resolutionScale, p.fbWidth, invRatioScale, extOriginPercentage, int32_t(horizontalMisalignment), call.callDesc.scissorLeftOrigin, call.callDesc.scissorRightOrigin);
+ 
++                        // DinoTale: the misalignment correction can move a scissor anchored to the left edge to x = -1,
++                        // and a negative scissor offset is invalid (some drivers then skip the draw entirely).
++                        triangles.scissor.left = std::max(triangles.scissor.left, 0);
++                        triangles.scissor.top = std::max(triangles.scissor.top, 0);
++
+                         bool usesViewport = (proj.type == Projection::Type::Perspective) || (proj.type == Projection::Type::Orthographic);
+                         if (usesViewport) {
+                             triangles.scissor = viewportScissorIntersection(viewportClip, triangles.scissor);

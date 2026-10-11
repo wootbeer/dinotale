@@ -6,6 +6,15 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 16: Expand at higher resolutions
+
+Expand drew nothing but 3D models (Yoshi) on the test setup at 2x/3x
+resolution: every S2DEX background and sprite was missing. RT64's
+"misalignment" correction for upscaled rendering moved the widened scissor's
+left edge to x = -1, and a negative scissor offset is invalid in Vulkan.
+Some drivers skip the draw, others clamp it, which is why it worked on the
+reporter's machine. Fix (`rt64/0010`): converted scissors are clamped to 0.
+
 ## Round 15: Expand, mirrored strip on the right
 
 **Report:** in Expand the right-hand strip of the far background looked
