@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 22: text box shimmer, part 2
+
+**Report:** text scrolling in message boxes still shimmers slightly.
+
+**Cause:** each strip of the text image (round 12) was placed by rounding its
+start to a quarter pixel on its own, with its texture always starting at the
+first texel. Neighbouring strips of the same image then disagreed by up to a
+fraction of a pixel, by an amount that changed every frame as the text
+scrolled and the strips' sub-pixel positions changed.
+
+**Fix** (`rt64/0013`): with clamped texture coordinates (the usual case,
+text boxes included), an object rectangle now starts on a whole pixel and its
+texture is moved back by the exact amount cut off, so every strip maps the
+image to the same screen positions. Title, menus, course select, pause panel
+and level sprites checked for regressions. Not yet confirmed on the text
+boxes themselves (the test setup couldn't reliably reach a message block).
+
 ## Round 21: Expand, black edge at a level's start
 
 **Report:** walking back to a level's start in Expand, the strip past the

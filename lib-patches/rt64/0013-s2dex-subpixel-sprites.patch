@@ -1,0 +1,36 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index c35c698..bbd3702 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -744,13 +744,24 @@ namespace RT64 {
+                 y1 -= insetY;
+             }
+ 
+-            int16_t uls = int16_t(std::lround(shrink * 32.0f));
+-            int16_t ult = int16_t(std::lround(shrink * 32.0f));
+-            if (flipS) { uls = int16_t(std::lround((o.imageW - shrink) * 32.0f)) - 1; dsdx = -dsdx; }
+-            if (flipT) { ult = int16_t(std::lround((o.imageH - shrink) * 32.0f)) - 1; dtdy = -dtdy; }
+-
+-            const int32_t ulx = int32_t(std::lround(x0 * 4.0f));
+-            const int32_t uly = int32_t(std::lround(y0 * 4.0f));
++            // Start the rectangle on a whole pixel and move the texture by the part of a pixel that cut off,
++            // so the texture lands exactly where the sprite's sub-pixel position puts it. Snapping each
++            // rectangle's start to a quarter pixel with the texture starting at its first texel put
++            // neighbouring strips of one image (text boxes, drawn as overlapping strips) a fraction of a
++            // pixel apart, by an amount that changed as the text scrolled, so the joins shimmered.
++            // (Only with clamped texture coordinates: the part before the first texel then repeats that texel.)
++            const bool clamped = (objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0;
++            const float startX = clamped ? std::floor(x0) : x0;
++            const float startY = clamped ? std::floor(y0) : y0;
++            const float leadS = (x0 - startX) * stepS;
++            const float leadT = (y0 - startY) * stepT;
++            int16_t uls = int16_t(std::lround((shrink - leadS) * 32.0f));
++            int16_t ult = int16_t(std::lround((shrink - leadT) * 32.0f));
++            if (flipS) { uls = int16_t(std::lround((o.imageW - shrink + leadS) * 32.0f)) - 1; dsdx = -dsdx; }
++            if (flipT) { ult = int16_t(std::lround((o.imageH - shrink + leadT) * 32.0f)) - 1; dtdy = -dtdy; }
++
++            const int32_t ulx = int32_t(std::lround(startX * 4.0f));
++            const int32_t uly = int32_t(std::lround(startY * 4.0f));
+             const int32_t lrx = int32_t(std::lround(x1 * 4.0f));
+             const int32_t lry = int32_t(std::lround(y1 * 4.0f));
+             rdp->drawTexRect(ulx, uly, lrx, lry, G_TX_RENDERTILE, uls, ult, dsdx, dtdy, false);
