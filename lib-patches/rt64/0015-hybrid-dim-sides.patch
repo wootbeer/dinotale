@@ -1,0 +1,90 @@
+diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
+index 79905f5..210e084 100644
+--- a/src/hle/rt64_present_queue.cpp
++++ b/src/hle/rt64_present_queue.cpp
+@@ -100,6 +100,7 @@ namespace RT64 {
+         EnhancementConfiguration::Presentation::Mode presentationMode;
+         bool removeBlackBorders;
+         bool stretchToWindow;
++        bool dimSides;
+         UserConfiguration::RefreshRate refreshRate;
+         UserConfiguration::Filtering filtering;
+         uint32_t viOriginalRate;
+@@ -110,6 +111,7 @@ namespace RT64 {
+             presentationMode = ext.sharedResources->enhancementConfig.presentation.mode;
+             removeBlackBorders = ext.sharedResources->enhancementConfig.presentation.removeBlackBorders;
+             stretchToWindow = ext.sharedResources->userConfig.stretchToWindow;
++            dimSides = ext.sharedResources->userConfig.stretchBackgrounds && !ext.sharedResources->userConfig.extendScreen;
+             refreshRate = ext.sharedResources->userConfig.refreshRate;
+             filtering = ext.sharedResources->userConfig.filtering;
+             viOriginalRate = ext.sharedResources->viOriginalRate;
+@@ -327,6 +329,7 @@ namespace RT64 {
+                     renderParams.vi = &present.screenVI;
+                     renderParams.removeBlackBorders = removeBlackBorders;
+                     renderParams.stretchToWindow = stretchToWindow;
++                    renderParams.dimSides = dimSides;
+ 
+                     const bool useDownsampling = (colorTarget->downsampleMultiplier > 1);
+                     if (useDownsampling) {
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index 88b2de6..92bebd5 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -85,6 +85,14 @@ namespace RT64 {
+         pushConstants.videoResolution = computeHDSize(hlslpp::float2(p.vi->fbSize()), p.resolutionScale, p.downsamplingScale);
+         pushConstants.textureResolution = { float(p.textureWidth), float(p.textureHeight) };
+         pushConstants.gamma = p.vi->gamma();
++        pushConstants.centerFraction = 1.0f;
++        pushConstants.sideBrightness = 1.0f;
++        if (p.dimSides && (pushConstants.videoResolution.x > 0.0f) && (pushConstants.videoResolution.y > 0.0f)) {
++            // The game's screen is 4:3 in the middle of the widened picture.
++            const float pictureAspect = float(pushConstants.videoResolution.x) / float(pushConstants.videoResolution.y);
++            pushConstants.centerFraction = std::min((4.0f / 3.0f) / pictureAspect, 1.0f);
++            pushConstants.sideBrightness = 0.45f;
++        }
+ 
+         p.commandList->setPipeline(shader->pipeline.get());
+         p.commandList->setGraphicsPipelineLayout(shader->pipelineLayout.get());
+diff --git a/src/render/rt64_vi_renderer.h b/src/render/rt64_vi_renderer.h
+index bfddeb9..d13a59b 100644
+--- a/src/render/rt64_vi_renderer.h
++++ b/src/render/rt64_vi_renderer.h
+@@ -30,6 +30,8 @@ namespace RT64 {
+             const VI *vi = nullptr;
+             bool removeBlackBorders = false;
+             bool stretchToWindow = false;
++            // DinoTale "Hybrid": dim the stretched sides outside the 4:3 screen.
++            bool dimSides = false;
+         };
+ 
+         VIRenderer();
+diff --git a/src/shaders/VideoInterfacePS.hlsl b/src/shaders/VideoInterfacePS.hlsl
+index 3f33475..305d1cb 100644
+--- a/src/shaders/VideoInterfacePS.hlsl
++++ b/src/shaders/VideoInterfacePS.hlsl
+@@ -17,6 +17,10 @@ float4 SampleInput(float2 uv) {
+     float4 sampledColor = gInput.SampleLevel(gSampler, clamp(uv, HalfPixel, LowerRight - HalfPixel), 0);
+     float4 gammaCorrectedColor = pow(sampledColor, gConstants.gamma);
+     gammaCorrectedColor.rgb *= max(1.0f - outsideBorder.x - outsideBorder.y, 0.0f);
++    const float videoX = uv.x / LowerRight.x;
++    if (abs(videoX - 0.5f) > (gConstants.centerFraction * 0.5f)) {
++        gammaCorrectedColor.rgb *= gConstants.sideBrightness;
++    }
+     gammaCorrectedColor.a = 1.0f;
+     return gammaCorrectedColor;
+ }
+diff --git a/src/shared/rt64_video_interface.h b/src/shared/rt64_video_interface.h
+index b51cf09..476d150 100644
+--- a/src/shared/rt64_video_interface.h
++++ b/src/shared/rt64_video_interface.h
+@@ -13,6 +13,10 @@ namespace interop {
+         float2 videoResolution;
+         float2 textureResolution;
+         float gamma;
++        // DinoTale "Hybrid": the middle part of the picture, as a fraction of its width, that's the
++        // game's 4:3 screen; the stretched sides outside it are multiplied by sideBrightness.
++        float centerFraction;
++        float sideBrightness;
+     };
+ #ifdef HLSL_CPU
+ };

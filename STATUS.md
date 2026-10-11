@@ -6,6 +6,22 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 27: Hybrid, dimmed sides
+
+**Report:** in Hybrid, things pop in near the sides of the screen; only the
+backgrounds are drawn there.
+
+**Why:** Hybrid stretches the backgrounds of the original 4:3 view across
+the window while sprites keep their shape, so the sprites stay in the middle
+4:3 area. Objects appear at its edge, though the stretched scenery seems to
+show their part of the level already. (Expand is the mode with a wider view.)
+
+**Change** (`rt64/0015`): in Hybrid the final picture's sides outside the
+4:3 area are dimmed (to 45%), so they fill the window without drawing the
+eye. The HUD stays inside the 4:3 area in Hybrid (HUD Placement only spreads
+it in Expand), so it's never dimmed. The Hybrid description in the menu says
+so (`RecompFrontend/0001`).
+
 ## Round 26: rotated sprites
 
 **Report:** in Tower Climb (Page 1, course 4) the flower platforms didn't

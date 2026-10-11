@@ -50,6 +50,7 @@ and leave the game's own behaviour, look and balance alone.
 - [x] HUD stays 4:3 in the other modes, also after switching mid-level (round 24)
 - [x] Expand follows the HUD Placement setting (round 25)
 - [x] Rotated S2DEX sprites (tilting platforms) (round 26)
+- [x] Hybrid: sides outside the 4:3 area dimmed (round 27)
 - [ ] Expand: check vertically scrolling levels
 - [ ] Play through more levels in every aspect mode
 
