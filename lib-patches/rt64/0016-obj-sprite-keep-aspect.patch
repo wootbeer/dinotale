@@ -1,0 +1,31 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index 09ed6a8..f0f222c 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -792,7 +792,26 @@ namespace RT64 {
+         // translation. With them, the microcode draws the sprite as two triangles;
+         // here it goes through the rectangle path over its bounding box, with the
+         // corners moved to where the matrix puts them.
++        // DinoTale: in a wider aspect ratio, RT64 stretches any rectangle that spans the whole width of the
++        // screen to the window, taking it for a background. A sprite the game transforms with the 2D matrix
++        // is an object being scaled or rotated, not a background: the message box frame's spring animation
++        // overshoots to just past the screen's edges, so its rails were stretched to the window for a frame.
++        // Keep such sprites' shape, unless the game chose an aspect with the extended GBI.
++        struct ObjSpriteAspectScope {
++            RDP *rdp;
++            uint8_t previous;
++            ObjSpriteAspectScope(State *state) : rdp(state->rdp.get()), previous(rdp->extended.global.rectAspect) {
++                if (previous == G_EX_ASPECT_AUTO) {
++                    rdp->extended.global.rectAspect = G_EX_ASPECT_ADJUST;
++                }
++            }
++            ~ObjSpriteAspectScope() {
++                rdp->extended.global.rectAspect = previous;
++            }
++        };
++
+         static void doObjSprite(State *state, const ObjSprite &o) {
++            ObjSpriteAspectScope aspectScope(state);
+             const auto &m = state->rsp->S2D.objMtx;
+             float sx0 = o.objX;
+             float sy0 = o.objY;

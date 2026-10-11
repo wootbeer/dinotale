@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 29: message box frame stretched to the window for a frame
+
+**Report:** when a message box opens, its wooden frame's top rail shoots out
+to the edges of the screen for a split second before it settles.
+
+**Cause:** the frame opens with a spring animation (the game scales its
+pieces, drawn as `G_OBJ_SPRITE` with the 2D matrix, to about 1.2x and back).
+At the peak the rails span x = -2 to 322, just past both edges of the
+320-wide screen. RT64 treats a rectangle that spans the whole screen width as
+a background and stretches it to the window in a wider aspect ratio, so the
+rails jumped to the window edges for that frame.
+
+**Fix** (`rt64/0016`): sprites drawn through the 2D matrix (`G_OBJ_SPRITE`,
+`G_OBJ_LDTX_SPRITE`) keep their shape (`G_EX_ASPECT_ADJUST`) unless the game
+chose an aspect itself. Plain sprite rectangles keep the old rule, so a
+full-screen overlay drawn as one still fills the window.
+
 ## Round 28: Expand, stale tiles when scrolling vertically
 
 **Report:** in Tower Climb, blocks of the wrong background tiles show up as

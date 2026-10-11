@@ -52,6 +52,7 @@ and leave the game's own behaviour, look and balance alone.
 - [x] Rotated S2DEX sprites (tilting platforms) (round 26)
 - [x] Hybrid: sides outside the 4:3 area dimmed (round 27)
 - [x] Expand: vertical scrolling streams full-width rows (round 28)
+- [x] Message box frame no longer stretches to the window mid-animation (round 29)
 - [ ] Expand: check vertically scrolling levels
 - [ ] Play through more levels in every aspect mode
 
