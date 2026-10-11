@@ -21,9 +21,9 @@ void dinotale_crash_note_rdram(uint8_t* rdram);
 void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 
 // src/game/widescreen.cpp
-int32_t dinotale_bg_view_width(int32_t width);
+int32_t dinotale_bg_view_width(uint8_t* rdram, int32_t width);
 uint32_t dinotale_camera_half_width_bits(void);
-uint32_t dinotale_camera_width_bits(void);
-void dinotale_bg_view_freed(void);
+void dinotale_bg_view_created(uint8_t* rdram, uint32_t view);
+void dinotale_bg_view_freed(uint8_t* rdram, uint32_t layer);
 
 #endif // DT_RECOMP_HOOKS_H

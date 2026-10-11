@@ -46,7 +46,8 @@ and leave the game's own behaviour, look and balance alone.
 
 ## Next
 
-- [ ] Expand: HUD to the window edges; check vertically scrolling levels
+- [ ] Expand: fill the strip past a level's start (black for now); HUD to
+      the window edges; check vertically scrolling levels
 - [ ] Play through more levels in every aspect mode
 
 - [ ] Graphics, input, saves (EEPROM), audio

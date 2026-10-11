@@ -6,6 +6,34 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 20: Expand, objects shifted (round 18 reverted)
+
+**Report:** in Expand everything the game positions itself was shifted right
+by the width it gained on each side, in levels and in menus such as course
+select.
+
+**Cause:** round 18 widened the camera object's own width (+0x9C). The
+camera's position (+0x0) is its left edge, and many places in the game and its
+overlays (around 40 files read the camera) measure from it: the pause panel,
+menus, objects. With a wider camera that edge moved left by 56, and only the
+two places that add 160 to get the centre had been adjusted. Round 18 also
+applied the wider camera in menus.
+
+**Now:**
+
+- The camera keeps its 320 width, so everything the game places stays where
+  it is on the N64.
+- The horizontal camera-wall probe stays widened (`func_8002A148`), so a
+  moving camera stops before the wider view crosses a level's end.
+- At a level's start the camera is placed for a 320-wide view, so the wider
+  view reaches past the level's art. Each background's ring buffer is now
+  cleared when it's created (hook after `func_8004EEEC`), so that strip is
+  black instead of whatever an earlier level left in that memory.
+- Tried and dropped: pushing the camera over at the level start (velocity or
+  direct). It aligns correctly, but the background streaming leaves stale
+  columns, mostly in the slow far layers; asking the layers for a full redraw
+  (`+0x1C0 = func_8005F5D0`, view `+0x0`) didn't cure it.
+
 ## Round 19: Expand can only be chosen outside a level
 
 Expand takes effect when a level starts, since that's when the game creates

@@ -135,7 +135,7 @@ value = 0x00000000
 [[patches.hook]]
 func = "func_8004F2B0"
 before_vram = 0x8004F34C
-text = "ctx->r4 = (gpr)(int32_t)dinotale_bg_view_width((int32_t)ctx->r4);"
+text = "ctx->r4 = (gpr)(int32_t)dinotale_bg_view_width(rdram, (int32_t)ctx->r4);"
 
 # True widescreen (Expand): the camera's horizontal wall probe uses half the
 # view width (160.0, loaded with `lui $at, 0x4320`); use half the widened
@@ -146,29 +146,17 @@ func = "func_8002A148"
 before_vram = 0x8002A1AC
 text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_half_width_bits();"
 
-# The camera's own view width, set to 320.0 when it's created. The camera's
-# follow and level-edge clamps, its rectangle and the on-screen tests for
-# objects all use it, so the wider view stays inside the level.
-[[patches.hook]]
-func = "func_8005A9BC"
-before_vram = 0x8005A9D4
-text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_width_bits();"
 
-# Places that turn the camera's left edge into its centre by adding 160.0:
-# the background view's centre and the screen position of objects.
+# The background view func_8004EEEC just created (in $v0): clear its ring
+# buffer; see src/game/widescreen.cpp.
 [[patches.hook]]
-func = "func_8004FEC8"
-before_vram = 0x8004FFBC
-text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_half_width_bits();"
-
-[[patches.hook]]
-func = "func_80058CC0"
-before_vram = 0x80058CD4
-text = "ctx->r1 = (gpr)(int32_t)dinotale_camera_half_width_bits();"
+func = "func_8004F2B0"
+before_vram = 0x8004F354
+text = "dinotale_bg_view_created(rdram, (uint32_t)ctx->r2);"
 
 # A background layer being freed (the end of a level): Expand's view width is
 # kept for the whole level, see src/game/widescreen.cpp.
 [[patches.hook]]
 func = "func_8004F38C"
 before_vram = 0x8004F38C
-text = "dinotale_bg_view_freed();"
+text = "dinotale_bg_view_freed(rdram, (uint32_t)ctx->r4);"
