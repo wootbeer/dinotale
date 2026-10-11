@@ -121,7 +121,9 @@ cmake --build build --target DinoTale -j$(nproc)
 Run it from the repo root: it loads `assets/` relative to the working
 directory. `--game yoshisstory` skips the launcher once the ROM has been
 selected. Configuring applies the patches in `lib-patches/` to the
-submodules (once; they show as modified submodules afterwards).
+submodules (they show as modified submodules afterwards). When a pull adds or
+changes a patch, the next configure resets those submodules' files and
+applies the whole set again, so local edits inside `lib/` are lost.
 
 ## 6. Package a Windows release
 

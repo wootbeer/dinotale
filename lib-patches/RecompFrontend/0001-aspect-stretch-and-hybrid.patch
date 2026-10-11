@@ -1,0 +1,56 @@
+diff --git a/recompui/src/config/ui_config_tab_graphics.cpp b/recompui/src/config/ui_config_tab_graphics.cpp
+index 4fdf81f..6131100 100644
+--- a/recompui/src/config/ui_config_tab_graphics.cpp
++++ b/recompui/src/config/ui_config_tab_graphics.cpp
+@@ -66,7 +66,10 @@ namespace recompui {
+ 
+         static EnumOptionVector aspect_ratio_options = {
+             {ultramodern::renderer::AspectRatio::Original, "Original"},
+-            {ultramodern::renderer::AspectRatio::Expand, "Expand"},
++            // DinoTale: Expand (true widescreen, more play area) is hidden until it's ready.
++            // {ultramodern::renderer::AspectRatio::Expand, "Expand"},
++            {ultramodern::renderer::AspectRatio::Stretch, "Stretch"},
++            {ultramodern::renderer::AspectRatio::Hybrid, "Hybrid"},
+             // {ultramodern::renderer::AspectRatio::Manual, "Manual"},
+         };
+ 
+@@ -286,9 +289,9 @@ namespace recompui {
+             config.add_enum_option(
+                 graphics::options::ar_option,
+                 "Aspect Ratio",
+-                "Sets the horizontal aspect ratio. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. <recomp-color primary>Expand</recomp-color> will adjust to match the game window's aspect ratio.",
++                "Sets the horizontal aspect ratio. <recomp-color primary>Original</recomp-color> uses the game's original 4:3 aspect ratio. <recomp-color primary>Stretch</recomp-color> stretches the original picture to fill the window. <recomp-color primary>Hybrid</recomp-color> stretches the backgrounds to fill the window and keeps the sprites' shape.",
+                 aspect_ratio_options,
+-                ultramodern::renderer::AspectRatio::Expand
++                ultramodern::renderer::AspectRatio::Original
+             );
+ 
+             config.add_enum_option(
+diff --git a/recompui/src/renderer/rt64_render_context.cpp b/recompui/src/renderer/rt64_render_context.cpp
+index a7954c7..e7643d7 100644
+--- a/recompui/src/renderer/rt64_render_context.cpp
++++ b/recompui/src/renderer/rt64_render_context.cpp
+@@ -81,6 +81,12 @@ RT64::UserConfiguration::AspectRatio to_rt64(ultramodern::renderer::AspectRatio
+             return RT64::UserConfiguration::AspectRatio::Expand;
+         case ultramodern::renderer::AspectRatio::Manual:
+             return RT64::UserConfiguration::AspectRatio::Manual;
++        case ultramodern::renderer::AspectRatio::Stretch:
++            // Rendered at the original aspect ratio, then stretched to the window (stretchToWindow).
++            return RT64::UserConfiguration::AspectRatio::Original;
++        case ultramodern::renderer::AspectRatio::Hybrid:
++            // Widened to the window, with the backgrounds stretched (stretchBackgrounds).
++            return RT64::UserConfiguration::AspectRatio::Expand;
+         case ultramodern::renderer::AspectRatio::OptionCount:
+             return RT64::UserConfiguration::AspectRatio::OptionCount;
+     }
+@@ -172,6 +178,10 @@ void set_application_user_config(RT64::Application* application, const ultramode
+     }
+ 
+     application->userConfig.aspectRatio = to_rt64(config.ar_option);
++    application->userConfig.stretchToWindow = (config.ar_option == ultramodern::renderer::AspectRatio::Stretch);
++    // Until true widescreen (more play area) is in, Expand behaves like Hybrid.
++    application->userConfig.stretchBackgrounds = (config.ar_option == ultramodern::renderer::AspectRatio::Hybrid) ||
++        (config.ar_option == ultramodern::renderer::AspectRatio::Expand);
+     application->userConfig.antialiasing = to_rt64(config.msaa_option);
+     application->userConfig.refreshRate = to_rt64(config.rr_option);
+     application->userConfig.refreshRateTarget = config.rr_manual_value;

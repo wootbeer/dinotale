@@ -6,6 +6,37 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 11: aspect ratio options (Stretch, Hybrid) and patch handling
+
+**Aspect ratio options.** Settings > Graphics > Aspect Ratio now offers:
+
+- **Original:** 4:3 with black bars (the default again; it was Expand).
+- **Stretch:** the original 4:3 picture, menus and all, scaled to fill the
+  window. RT64 renders at 4:3 and the final presentation scales each axis
+  separately (`stretchToWindow`).
+- **Hybrid:** RT64's widened mode, with every S2DEX background stretched
+  to the full width while sprites keep their shape. Before this only
+  backgrounds that covered the whole scissor were stretched, and the sky
+  layer, which the game draws one pixel in from the edge, stayed 4:3 and left
+  black corners. Sprites are placed in 4:3 terms, so they shift slightly
+  against the scenery towards the sides.
+- **Expand** is kept for true widescreen (more play area, round 10's plan)
+  and hidden until it works; a config that already says Expand behaves like
+  Hybrid for now.
+
+Patches: `rt64/0005`, `N64ModernRuntime/0002`, `RecompFrontend/0001`.
+
+**The thin line at the top/left edge** in levels is the original game: the
+sky layer starts one pixel in, so the layer behind shows through. The
+reference emulator shows the same; on a TV it was in the overscan.
+
+**Patch handling.** Configure used to test each patch on its own by
+reverse-applying it. Once a later patch changed lines next to an earlier one,
+the earlier patch no longer reversed cleanly, looked unapplied, and configure
+failed trying to apply it again. Now the applied set is recorded by hash in
+the submodule's git directory; when the set changes, the submodule's files are
+reset and all of its patches applied again in order.
+
 ## Round 10: widescreen feasibility
 
 **Question:** can the levels show more play area in 16:9, rather than

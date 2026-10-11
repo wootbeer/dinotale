@@ -1,0 +1,158 @@
+diff --git a/src/common/rt64_user_configuration.h b/src/common/rt64_user_configuration.h
+index 4857f22..3e0f5a7 100644
+--- a/src/common/rt64_user_configuration.h
++++ b/src/common/rt64_user_configuration.h
+@@ -94,6 +94,10 @@ namespace RT64 {
+         double aspectTarget;
+         AspectRatio extAspectRatio;
+         double extAspectTarget;
++        // DinoTale: scale the finished frame to fill the window, ignoring its aspect ratio.
++        bool stretchToWindow = false;
++        // DinoTale: stretch S2DEX backgrounds to the full width in a wider aspect ratio.
++        bool stretchBackgrounds = false;
+         Upscale2D upscale2D;
+         bool threePointFiltering;
+         RefreshRate refreshRate;
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index 3b25615..cc4de5c 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -133,7 +133,25 @@ namespace RT64 {
+             }
+         }
+ 
++        // DinoTale "Hybrid" aspect ratio: S2DEX backgrounds are stretched to the full width of a
++        // wider screen while sprites keep their shape. Without this only backgrounds that cover the
++        // whole scissor get stretched; Yoshi's Story's sky layer is inset by a pixel, so it stayed
++        // 4:3 and left black bars. Games that choose an aspect with the extended GBI keep it.
++        struct BgStretchScope {
++            RDP *rdp;
++            uint8_t previous;
++            BgStretchScope(State *state) : rdp(state->rdp.get()), previous(rdp->extended.global.rectAspect) {
++                if (state->ext.userConfig->stretchBackgrounds && (previous == G_EX_ASPECT_AUTO)) {
++                    rdp->extended.global.rectAspect = G_EX_ASPECT_STRETCH;
++                }
++            }
++            ~BgStretchScope() {
++                rdp->extended.global.rectAspect = previous;
++            }
++        };
++
+         void bg1Cyc(State *state, DisplayList **dl) {
++            BgStretchScope bgStretchScope(state);
+ #       ifdef LOG_BGRECT_METHODS
+             RT64_LOG_PRINTF("bg1Cyc::start(0x%08X)", (*dl)->w1);
+ #       endif
+@@ -407,6 +425,7 @@ namespace RT64 {
+         }
+         
+         void bgCopy(State *state, DisplayList **dl) {
++            BgStretchScope bgStretchScope(state);
+             // TODO: Reimplement more accurately to match the microcode.
+ 
+ #       ifdef LOG_BGRECT_METHODS
+diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
+index 7de5b69..79905f5 100644
+--- a/src/hle/rt64_present_queue.cpp
++++ b/src/hle/rt64_present_queue.cpp
+@@ -99,6 +99,7 @@ namespace RT64 {
+         hlslpp::float2 resolutionScale;
+         EnhancementConfiguration::Presentation::Mode presentationMode;
+         bool removeBlackBorders;
++        bool stretchToWindow;
+         UserConfiguration::RefreshRate refreshRate;
+         UserConfiguration::Filtering filtering;
+         uint32_t viOriginalRate;
+@@ -108,6 +109,7 @@ namespace RT64 {
+             resolutionScale = ext.sharedResources->resolutionScale;
+             presentationMode = ext.sharedResources->enhancementConfig.presentation.mode;
+             removeBlackBorders = ext.sharedResources->enhancementConfig.presentation.removeBlackBorders;
++            stretchToWindow = ext.sharedResources->userConfig.stretchToWindow;
+             refreshRate = ext.sharedResources->userConfig.refreshRate;
+             filtering = ext.sharedResources->userConfig.filtering;
+             viOriginalRate = ext.sharedResources->viOriginalRate;
+@@ -324,6 +326,7 @@ namespace RT64 {
+                     renderParams.filtering = filtering;
+                     renderParams.vi = &present.screenVI;
+                     renderParams.removeBlackBorders = removeBlackBorders;
++                    renderParams.stretchToWindow = stretchToWindow;
+ 
+                     const bool useDownsampling = (colorTarget->downsampleMultiplier > 1);
+                     if (useDownsampling) {
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index b4ff4e9..96cfc3c 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -23,11 +23,16 @@ namespace RT64 {
+         return coordinate * relativeScale;
+     }
+ 
+-    inline hlslpp::float2 fromHDtoWindow(hlslpp::float2 coordinate, hlslpp::float2 hdSize, hlslpp::float2 windowSize) {
++    inline hlslpp::float2 fromHDtoWindow(hlslpp::float2 coordinate, hlslpp::float2 hdSize, hlslpp::float2 windowSize, bool stretchToWindow = false) {
+         const hlslpp::float2 hdCenter = hdSize / 2;
+         const hlslpp::float2 windowCenter = windowSize / 2;
+         const hlslpp::float2 relativeCoordinate = { coordinate.x - hdCenter.x, coordinate.y - hdCenter.y };
+ 
++        // Fill the window in both directions, ignoring the aspect ratio.
++        if (stretchToWindow) {
++            return windowCenter + relativeCoordinate * (windowSize / hdSize);
++        }
++
+         // Window is wider than virtual HD TV, we do pillarboxing.
+         float relativeScale;
+         if ((windowSize.x / windowSize.y) > (hdSize.x / hdSize.y)) {
+@@ -69,7 +74,7 @@ namespace RT64 {
+ 
+         RenderViewport viewport;
+         RenderRect scissor;
+-        getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor);
++        getViewportAndScissor(p.swapChain, *p.vi, p.resolutionScale, p.downsamplingScale, p.removeBlackBorders, viewport, scissor, p.stretchToWindow);
+         p.commandList->setViewports(viewport);
+         p.commandList->setScissors(scissor);
+ 
+@@ -86,7 +91,7 @@ namespace RT64 {
+         p.commandList->drawInstanced(3, 1, 0, 0);
+     }
+ 
+-    void VIRenderer::getViewportAndScissor(const RenderSwapChain *swapChain, const VI &vi, hlslpp::float2 resolutionScale, uint32_t downsamplingScale, bool removeBlackBorders, RenderViewport &viewport, RenderRect &scissor) {
++    void VIRenderer::getViewportAndScissor(const RenderSwapChain *swapChain, const VI &vi, hlslpp::float2 resolutionScale, uint32_t downsamplingScale, bool removeBlackBorders, RenderViewport &viewport, RenderRect &scissor, bool stretchToWindow) {
+         // We define three different coordinate spaces to work with to translate the VI parameters into the Window.
+         //
+         // VideoSD: This corresponds to the SD TV Scanline space, which is what the VI natively works on.
+@@ -111,13 +116,13 @@ namespace RT64 {
+         // Scale all the rectangles to the space of the Window.
+         hlslpp::float2 topLeftViewport = fromSDtoHD({ float(viViewRect.x), float(viViewRect.y) }, sdSize, hdSize);
+         hlslpp::float2 bottomRightViewport = fromSDtoHD({ float(viViewRect.x + viViewRect.z), float(viViewRect.y + viViewRect.w) }, sdSize, hdSize);
+-        topLeftViewport = fromHDtoWindow(topLeftViewport, hdSize, windowSize);
+-        bottomRightViewport = fromHDtoWindow(bottomRightViewport, hdSize, windowSize);
++        topLeftViewport = fromHDtoWindow(topLeftViewport, hdSize, windowSize, stretchToWindow);
++        bottomRightViewport = fromHDtoWindow(bottomRightViewport, hdSize, windowSize, stretchToWindow);
+ 
+         hlslpp::float2 topLeftScissor = fromSDtoHD({ float(viCropRect.x), float(viCropRect.y) }, sdSize, hdSize);
+         hlslpp::float2 bottomRightScissor = fromSDtoHD({ float(viCropRect.x + viCropRect.z), float(viCropRect.y + viCropRect.w) }, sdSize, hdSize);
+-        topLeftScissor = fromHDtoWindow(topLeftScissor, hdSize, windowSize);
+-        bottomRightScissor = fromHDtoWindow(bottomRightScissor, hdSize, windowSize);
++        topLeftScissor = fromHDtoWindow(topLeftScissor, hdSize, windowSize, stretchToWindow);
++        bottomRightScissor = fromHDtoWindow(bottomRightScissor, hdSize, windowSize, stretchToWindow);
+ 
+         viewport = RenderViewport(topLeftViewport.x, topLeftViewport.y, bottomRightViewport.x - topLeftViewport.x, bottomRightViewport.y - topLeftViewport.y);
+         scissor = RenderRect(lround(topLeftScissor.x), lround(topLeftScissor.y), lround(bottomRightScissor.x), lround(bottomRightScissor.y));
+diff --git a/src/render/rt64_vi_renderer.h b/src/render/rt64_vi_renderer.h
+index 8a3782a..bfddeb9 100644
+--- a/src/render/rt64_vi_renderer.h
++++ b/src/render/rt64_vi_renderer.h
+@@ -29,11 +29,12 @@ namespace RT64 {
+             UserConfiguration::Filtering filtering = UserConfiguration::Filtering::Linear;
+             const VI *vi = nullptr;
+             bool removeBlackBorders = false;
++            bool stretchToWindow = false;
+         };
+ 
+         VIRenderer();
+         ~VIRenderer();
+         void render(const RenderParams &p);
+-        static void getViewportAndScissor(const RenderSwapChain *swapChain, const VI &vi, hlslpp::float2 resolutionScale, uint32_t downsamplingScale, bool removeBlackBorders, RenderViewport &viewport, RenderRect &scissor);
++        static void getViewportAndScissor(const RenderSwapChain *swapChain, const VI &vi, hlslpp::float2 resolutionScale, uint32_t downsamplingScale, bool removeBlackBorders, RenderViewport &viewport, RenderRect &scissor, bool stretchToWindow = false);
+     };
+ };
+\ No newline at end of file

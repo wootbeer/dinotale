@@ -35,11 +35,12 @@ and leave the game's own behaviour, look and balance alone.
 - [x] S2DEX sprites implemented in RT64: Options screen, lucky fruit
       screen, sprites and HUD in levels (round 8)
 - [x] Level backgrounds and texture-load status in RT64 (round 9)
+- [x] Aspect ratio options: Original, Stretch, Hybrid (round 11)
 
 ## In progress
 
 - [ ] Rotated S2DEX sprites (drawn unrotated for now)
-- [ ] True widescreen (more play area, not stretching): feasibility checked,
+- [ ] Expand: true widescreen (more play area, not stretching): feasibility checked,
       background streaming understood (round 10)
 
 ## Next

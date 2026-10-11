@@ -75,6 +75,7 @@ endif()
 include(${CMAKE_SOURCE_DIR}/cmake/ApplyLibPatches.cmake)
 dinotale_apply_lib_patches(rt64)
 dinotale_apply_lib_patches(N64ModernRuntime)
+dinotale_apply_lib_patches(RecompFrontend)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/lib/rt64 ${CMAKE_BINARY_DIR}/rt64)
 
