@@ -6,6 +6,36 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 18: Expand, camera covers the wider view
+
+**Problem:** at a level's left end, Expand showed background-buffer columns
+the game never filled, because the camera stopped where a 320-wide view
+would.
+
+**Findings** (`frameManager`, `bgManager`, `1E360`):
+
+- The camera object (pointer at `D_800F7EA0+0x478`) keeps its own view size,
+  set to 320 x 240 when it's created (`func_8005A9BC`). Its left/top corner
+  is at `+0x0`, its centre at `+0x30`, its corners after that. The follow
+  logic and the clamp at the level's ends work from that width.
+- The camera is stopped by camera-wall tiles in the level data, probed at
+  centre +/- 160 (`func_8002A148`, horizontal movement).
+- Two places turn the camera's left edge into its centre by adding 160: the
+  background view's centre (`func_8004FEC8`) and the world-to-screen
+  conversion for objects (`func_80058CC0`).
+- `func_800591EC`, the on-screen test for objects, uses the camera width.
+
+**Fix** (hooks in `yoshisstory.us.toml`, values from
+`src/game/widescreen.cpp`), in Expand only: the camera is created with the
+widened width (432 for 16:9), and the wall probe and both centre offsets use
+half of it (216). The level start now shows real scenery to the window's
+left edge, and the backgrounds, sprites and Yoshi stay aligned. Original,
+Stretch and Hybrid keep 320/160.
+
+Still to check in Expand: objects at the new edges (spawning, culling), the
+vertical wall probe (`func_8002A630`, left at 160: widening it pushed the
+camera off at the level start), and the HUD.
+
 ## Round 17: top specks and right-edge strip
 
 - **Top specks (Expand/Hybrid, higher resolutions):** the first row the game

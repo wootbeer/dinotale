@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 
 #include <SDL.h>
 
@@ -49,4 +50,26 @@ extern "C" int32_t dinotale_bg_view_width(int32_t width) {
     // original one with the same number of pixels on each side.
     const int32_t wide = int32_t(std::ceil(original_view_width * aspect / original_aspect / 16.0)) * 16;
     return std::max(wide, original_view_width);
+}
+
+// The camera stops scrolling where a probe at its centre +/- half the view
+// width hits a camera-wall tile in the level data (func_8002A148 for
+// horizontal movement, func_8002A630 for vertical). The game uses 160, half
+// of 320; with a wider view the probe has to reach the wider edges, or the
+// view runs past a level's ends. Returns the float bits for the $at register.
+extern "C" uint32_t dinotale_camera_half_width_bits() {
+    const float half = float(dinotale_bg_view_width(original_view_width)) / 2.0f;
+    uint32_t bits;
+    static_assert(sizeof(bits) == sizeof(half));
+    std::memcpy(&bits, &half, sizeof(bits));
+    return bits;
+}
+
+// The camera's view width (func_8005A9BC sets it to 320.0 when the camera is
+// created). Returns the float bits for the $at register.
+extern "C" uint32_t dinotale_camera_width_bits() {
+    const float width = float(dinotale_bg_view_width(original_view_width));
+    uint32_t bits;
+    std::memcpy(&bits, &width, sizeof(bits));
+    return bits;
 }

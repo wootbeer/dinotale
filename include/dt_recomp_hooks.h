@@ -22,5 +22,7 @@ void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 
 // src/game/widescreen.cpp
 int32_t dinotale_bg_view_width(int32_t width);
+uint32_t dinotale_camera_half_width_bits(void);
+uint32_t dinotale_camera_width_bits(void);
 
 #endif // DT_RECOMP_HOOKS_H

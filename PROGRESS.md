@@ -41,7 +41,7 @@ and leave the game's own behaviour, look and balance alone.
 
 - [ ] Rotated S2DEX sprites (drawn unrotated for now)
 - [ ] Expand: true widescreen (more play area, not stretching): backgrounds
-      done (round 13); sprites/enemies, camera limits and HUD to go
+      (round 13) and camera (round 18) done; objects at the edges and HUD to go
 
 ## Next
 
