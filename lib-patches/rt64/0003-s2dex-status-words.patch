@@ -1,0 +1,38 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+index 2b7b7bc..3b25615 100644
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -27,7 +27,10 @@ namespace RT64 {
+         void moveWord(State *state, DisplayList **dl) {
+             switch ((*dl)->p0(0, 8)) {
+             case G_MW_GENSTAT:
+-                assert(false);
++                // gSPSetStatus(sid, value): sets the status word that the
++                // G_OBJ_LOADTXTR family compares against to skip texture loads
++                // (sid is 0, 4, 8 or 12).
++                state->rsp->S2D.statuses[((*dl)->p0(8, 16) >> 2) & 0x3] = (*dl)->w1;
+                 break;
+             default:
+                 GBI_F3D::moveWord(state, dl);
+@@ -798,6 +801,12 @@ namespace RT64 {
+         void reset(State *state) {
+             state->rsp->objRenderMode = 0x0;
+             state->rsp->S2D.objMtx = { 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f };
++            // The texture load status words live in the microcode's DMEM data,
++            // which loading the microcode (task start or G_LOAD_UCODE) overwrites.
++            // Keeping them across a reload makes loads skip textures that are
++            // no longer in TMEM.
++            state->rsp->S2D.statuses.fill(0);
++            state->rsp->S2D.data_02AE = 0;
+         }
+ 
+         void setup(GBI *gbi) {
+@@ -841,6 +850,7 @@ namespace RT64 {
+             gbi->map[G_SETTIMG] = &GBI_F3D::setTextureImage;
+ 
+             gbi->resetFromTask = &reset;
++            gbi->resetFromLoad = &reset;
+         }
+     }
+ };
+\ No newline at end of file

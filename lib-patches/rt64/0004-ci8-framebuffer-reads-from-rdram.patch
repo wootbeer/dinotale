@@ -1,0 +1,19 @@
+diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
+index a10c11a..5efdad1 100644
+--- a/src/hle/rt64_rdp.cpp
++++ b/src/hle/rt64_rdp.cpp
+@@ -672,6 +672,14 @@ namespace RT64 {
+         checkImageOverlap(textureStart, textureEnd);
+ 
+         Framebuffer *framebuffer = state->framebufferManager.findMostRecentContaining(textureStart, textureEnd);
++        // DinoTale: 8-bit framebuffers hold colour indices that the GPU copy can't
++        // reproduce. Yoshi's Story draws pieces of its CI8 level backgrounds into
++        // them with the RDP while the rest of each image comes from the CPU, so a
++        // tile copy from the GPU framebuffer showed a black background. Read them
++        // from RDRAM instead.
++        if ((framebuffer != nullptr) && (framebuffer->siz == G_IM_SIZ_8b)) {
++            return false;
++        }
+         if (framebuffer != nullptr) {
+             FramebufferTile fbTile;
+             const bool RGBA32 = (t.siz == G_IM_SIZ_32b) && (t.fmt == G_IM_FMT_RGBA);

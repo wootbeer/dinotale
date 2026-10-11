@@ -6,6 +6,42 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 9: black level backgrounds and garbled tiles
+
+**Symptoms:** in levels the parallax backgrounds were black (so moving
+sprites left trails), and the dotted ring and some block tiles were garbled.
+Two separate RT64 problems, both fixed with new patches in
+`lib-patches/rt64/`.
+
+**Garbled tiles: S2DEX status words** (`0003-s2dex-status-words.patch`).
+S2DEX's `G_OBJ_LOADTXTR` family skips a texture load when a status word
+already says that texture is in TMEM. Two things were wrong in RT64:
+`gSPSetStatus` (`G_MOVEWORD` with `G_MW_GENSTAT`) was an `assert(false)`
+no-op, and the status words survived when the microcode was reloaded. On
+the RSP they live in the microcode's DMEM data, which a task start or a
+`G_LOAD_UCODE` overwrites; Yoshi's Story switches between S2DEX and F3DEX in
+the middle of every frame, so stale words made S2DEX skip loads of textures
+F3DEX had since replaced. Now `G_MW_GENSTAT` sets the word, and the S2DEX
+state is reset on every microcode load as well as every task.
+
+**Black backgrounds: 8-bit framebuffers**
+(`0004-ci8-framebuffer-reads-from-rdram.patch`). Each level background
+layer is a 336x256 CI8 image in RDRAM, drawn every frame with
+`G_BG_1CYC`. At level start the game also points the RDP's colour image at
+those images (8-bit, colour-index) and draws pieces of them with the RDP;
+the rest comes from the CPU. RT64 then tracks those images as framebuffers,
+and when `G_BG_1CYC` reads them it takes its "framebuffer tile copy" path,
+copying from the GPU's version of the framebuffer instead of RDRAM. A GPU
+framebuffer can't hold the colour indices (and only had the RDP-drawn
+pieces anyway), so the result was black. RT64 now never uses a tile copy
+from an 8-bit framebuffer and reads those textures from RDRAM, as the
+hardware does. Checked against the reference emulator: the first level's
+background matches.
+
+Two earlier experiments turned out not to be needed and were dropped
+(never discarding framebuffers the CPU changed, keeping the viewport across
+tasks).
+
 ## Round 8: blank Options screen -- RT64 was missing S2DEX sprite commands
 
 **Report (Windows, real GPU):** the menus work, but choosing Options gives a
