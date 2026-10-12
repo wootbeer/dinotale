@@ -6,6 +6,26 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 32: Expand, invisible wall short of the screen edge (issue #4)
+
+**Report:** in level 3-2 in widescreen, Yoshi can't enter the outer edge of
+the screen, as if a barrier were there; fine in 4:3.
+
+**Cause:** `func_80023310` keeps Yoshi on screen: past the camera centre
+-/+ 144 (16 px inside a 320-wide view) it pushes him back. In Expand the
+camera stays 320 wide (round 20) and its wall probe is widened, so where the
+camera stops (camera walls, level ends) the wider view reaches 56 px past the
+camera's own edge, and Yoshi was stopped 56 px before the visible edge.
+Reproduced at Treasure Hunt's start after scrolling away and back; found by
+watching Yoshi's x with gdb while he pushed against the wall.
+
+**Fix:** hooks on the two `lui` of -/+144 load the wider view's half width
+less 16 (200 for 16:9) in Expand (`dinotale_screen_margin_bits`). Other
+modes keep 144.
+
+Also: Hybrid and Expand are marked "(experimental)" in the aspect ratio
+description (`RecompFrontend/0001`) and the README.
+
 ## Round 31: game picked from a .zip or .7z
 
 **Request:** let players pick the game inside an archive (.zip, .rar, .7z).

@@ -177,6 +177,16 @@ extern "C" int32_t dinotale_bg_row_columns(int32_t columns) {
     return columns + (current_view_width() - original_view_width) / 16;
 }
 
+// How far from the camera's centre Yoshi may go before func_80023310 pushes
+// him back on screen: 144 for the 320-wide view (16 px inside its edge), as
+// float bits for $at, negative for the left side. In Expand it's the wider
+// view's half width less the same 16 px, so he can walk up to the visible
+// edge where the camera stops (camera walls, level ends).
+extern "C" uint32_t dinotale_screen_margin_bits(int32_t side) {
+    const float margin = float(active_view_width()) / 2.0f - 16.0f;
+    return float_bits((side < 0) ? -margin : margin);
+}
+
 // Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background
 // image to cover with black when it's drawn.
 extern "C" void rt64_dinotale_set_bg_left_mask(uint32_t address, int32_t columns);
