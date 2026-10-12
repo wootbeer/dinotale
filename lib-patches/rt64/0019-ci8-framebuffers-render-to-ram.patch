@@ -1,0 +1,38 @@
+diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
+index 2970e71..3568532 100644
+--- a/src/hle/rt64_state.cpp
++++ b/src/hle/rt64_state.cpp
+@@ -818,7 +818,21 @@ namespace RT64 {
+ 
+         // Validate all tile copies to be used during the rendering.
+         const bool extendedRenderToRAMSet = (extended.renderToRAM < UINT8_MAX);
+-        const bool renderToRDRAM = extendedRenderToRAMSet ? (extended.renderToRAM != 0) : ext.emulatorConfig->framebuffer.renderToRAM;
++        const bool renderAllToRDRAM = extendedRenderToRAMSet ? (extended.renderToRAM != 0) : ext.emulatorConfig->framebuffer.renderToRAM;
++
++        // DinoTale: 8-bit (colour-index) framebuffers are always rendered back to RDRAM. Yoshi's Story
++        // draws background tiles into its CI8 background images with the RDP and then reads them as
++        // textures from RDRAM (rt64/0004: a GPU copy can't hold colour indices). Without the write-back
++        // those tiles never reach RDRAM, and old tiles show in their place.
++        bool workloadHas8bitFb = false;
++        for (uint32_t f = 0; f < workload.fbPairCount; f++) {
++            if (!workload.fbPairs[f].drawColorRect.isEmpty() && (workload.fbPairs[f].colorImage.siz == G_IM_SIZ_8b)) {
++                workloadHas8bitFb = true;
++                break;
++            }
++        }
++
++        const bool renderToRDRAM = renderAllToRDRAM || workloadHas8bitFb;
+         const bool warningsEnabled = ext.userConfig->developerMode;
+         const bool linearFiltering = !ext.userConfig->threePointFiltering;
+         const size_t callTileCount = workload.drawData.callTiles.size();
+@@ -1174,6 +1188,10 @@ namespace RT64 {
+             uint32_t depthRowEnd = 0;
+             auto getFramebufferPairs = [&](uint32_t f) {
+                 FramebufferPair &fbPair = workload.fbPairs[f];
++                if (!renderAllToRDRAM && (fbPair.colorImage.siz != G_IM_SIZ_8b)) {
++                    return false;
++                }
++
+                 if (!fbPair.drawColorRect.isEmpty()) {
+                     const auto &colorImg = fbPair.colorImage;
+                     const auto &depthImg = fbPair.depthImage;

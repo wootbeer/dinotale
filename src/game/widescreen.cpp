@@ -103,7 +103,14 @@ namespace {
         recompui::config::graphics::set_expand_available(available);
     }
 
-    uint32_t float_bits(float value) {
+    // A layer's view width scaled from the 320-wide screen to the level's view
+    // width, rounded up to whole 16-pixel tile columns.
+    int32_t scale_to_level(int32_t width) {
+        const int32_t scaled = (width * level_view_width + original_view_width * 16 - 1) / (original_view_width * 16);
+        return std::max(scaled * 16, width);
+    }
+
+        uint32_t float_bits(float value) {
         uint32_t bits;
         static_assert(sizeof(bits) == sizeof(value));
         std::memcpy(&bits, &value, sizeof(bits));
@@ -125,10 +132,9 @@ extern "C" int32_t dinotale_bg_view_width(uint8_t* rdram, int32_t width) {
     live_bg_views++;
     update_expand_available();
 
-    if (width != original_view_width) {
-        return width;
-    }
-    return level_view_width;
+    // Wider layers (the zoomed-out areas of some levels, e.g. 4-1's treehouse,
+    // draw a 480-wide layer at 70%) grow in proportion, in whole tile columns.
+    return scale_to_level(width);
 }
 
 // Called with each background view func_8004EEEC just created. Its ring
@@ -174,7 +180,10 @@ extern "C" uint32_t dinotale_camera_half_width_bits() {
 // it needs the view's extra columns too, or rows streamed in as the camera
 // moves up or down stop short of the right side and leave old tiles there.
 extern "C" int32_t dinotale_bg_row_columns(int32_t columns) {
-    return columns + (current_view_width() - original_view_width) / 16;
+    // 20 for a 320-wide layer, 30 for a 480-wide one; widened as in
+    // dinotale_bg_view_width.
+    const int32_t width = current_view_width();
+    return (columns * width + original_view_width - 1) / original_view_width;
 }
 
 // How far from the camera's centre Yoshi may go before func_80023310 pushes

@@ -6,6 +6,34 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 36: stale background blocks in 4-1 (issue #7)
+
+**Report:** many graphical glitches in 4-1, in Original and widescreen:
+rectangular blocks of the wrong background around the treehouse.
+
+**Reproducing:** the selected page and course are bytes at `D_800F7EA0
++0xF5C` / `+0xF5D` (0-based; the code reads them as a pair). Holding the page
+byte at 3 with gdb while course 1 starts loads 4-1 from a fresh save
+(`page.sh` in the test harness).
+
+**Cause:** the game draws newly exposed background tiles into its CI8 ring
+buffers with the RDP, and reads the buffers as textures from RDRAM (rt64/0004,
+since a GPU copy can't hold colour indices). RT64 only copies framebuffers
+back to RDRAM with its render-to-RAM option, which is off, so those tiles
+never reached RDRAM and whatever the buffer held before showed in their
+place. Most levels write nearly all tiles with the CPU, so it rarely showed;
+4-1's treehouse zooms the camera out to 70% (all layers drawn at scale
+1461/1024, plus a 480x352 layer) and streams far more tiles through the RDP.
+
+**Fix** (`rt64/0019`): framebuffer pairs with an 8-bit colour image are
+always rendered back to RDRAM; everything else is unchanged. Same play
+sequence compared before and after: the stray tiles (stone blocks, cut
+strips of the hut) are gone.
+
+**Expand:** the 480-wide layer is now widened in proportion like the
+320-wide ones (to 656 for 16:9), and row requests grow by the same factor
+(30 columns -> 41), so the zoomed-out treehouse fills the wider screen.
+
 ## Round 35: crash log detail (issue #6)
 
 **Report:** a crash in level 4-1 (0.1.0, Windows): access violation writing

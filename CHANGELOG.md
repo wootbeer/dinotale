@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Fixed blocks of wrong background tiles in 4-1 (and anywhere the game
+  draws background tiles with the RDP), in every aspect ratio.
+- Expand: the zoomed-out treehouse in 4-1 fills the whole wider screen.
+
 ## 0.1.1
 
 - The game can be picked inside a `.zip` or `.7z` archive.
