@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 - Fixed blocks of wrong background tiles in 4-1 (and anywhere the game
   draws background tiles with the RDP), in every aspect ratio.
