@@ -32,7 +32,7 @@ index 6ba64e2..64f72c0 100644
      auto options_updates = config->get_config_option_updates();
      bool has_updates = !options_updates.empty();
 diff --git a/recompui/src/config/ui_config_tab_graphics.cpp b/recompui/src/config/ui_config_tab_graphics.cpp
-index 4fdf81f..d0e3734 100644
+index 4fdf81f..9703ca4 100644
 --- a/recompui/src/config/ui_config_tab_graphics.cpp
 +++ b/recompui/src/config/ui_config_tab_graphics.cpp
 @@ -1,3 +1,5 @@
@@ -103,7 +103,19 @@ index 4fdf81f..d0e3734 100644
          void graphics::update_refresh_rate(uint32_t refresh_rate) {
              recomp::config::Config& config = get_graphics_config();
              std::string framerate_text = get_framerate_text(refresh_rate);
-@@ -286,9 +329,9 @@ namespace recompui {
+@@ -235,7 +278,10 @@ namespace recompui {
+             config.add_enum_option(
+                 graphics::options::res_option,
+                 "Resolution",
+-                "Sets the output resolution of the game. <recomp-color primary>Original</recomp-color> matches the game's original 240p resolution. <recomp-color primary>Original 2x</recomp-color> will render at 480p. <recomp-color primary>Auto</recomp-color> will scale based on the game window's resolution.",
++                "Sets the resolution the game is rendered at. "
++                "<recomp-color primary>Original</recomp-color>: 240p, the N64's own resolution. "
++                "<recomp-color primary>Original 2x</recomp-color>: 480p. "
++                "<recomp-color primary>Auto</recomp-color>: the window's own resolution, so 720p, 1080p, 1440p or 4K in a fullscreen window on a screen of that size.",
+                 resolution_options,
+                 ultramodern::renderer::Resolution::Auto
+             );
+@@ -286,9 +332,9 @@ namespace recompui {
              config.add_enum_option(
                  graphics::options::ar_option,
                  "Aspect Ratio",

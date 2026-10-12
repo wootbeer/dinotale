@@ -6,6 +6,7 @@
 - Expand: Yoshi can walk all the way to the edge of the screen where the
   camera stops (an invisible wall used to stop him short, e.g. in 3-2).
 - Hybrid and Expand are marked experimental in the settings.
+- The Resolution setting's description says what each option renders at.
 
 ## 0.1.0
 
