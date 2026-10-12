@@ -218,6 +218,9 @@ endif()
 if (MSVC)
     # Disable identical code folding, since this breaks mod function patching as multiple functions can get merged into one.
     target_link_options(DinoTale PRIVATE /OPT:NOICF)
+    # A map of the exe's functions, kept in the build folder (not shipped), so a
+    # crash log's "Fault offset" can be looked up in it.
+    target_link_options(DinoTale PRIVATE "/MAP:${CMAKE_BINARY_DIR}/DinoTale.map")
 elseif (APPLE)
     # Use a wrapper around ld64 that respects segprot's `max_prot` value in order
     # to make our executable memory writable (required for mod function patching)

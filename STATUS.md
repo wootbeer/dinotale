@@ -6,6 +6,26 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 35: crash log detail (issue #6)
+
+**Report:** a crash in level 4-1 (0.1.0, Windows): access violation writing
+host address 0x2658d7fffe0, outside N64 memory, "not in a recompiled game
+function", fault offset 0x7482ee; only func_807C6C00 on the stack.
+
+**What it tells us:** func_807C6C00 is a fade object (counts a byte up by 8
+to 255, then starts a scene change through func_8006E0FC/func_80068CF8);
+it and its callees only store into RDRAM, so the faulting code is elsewhere.
+A single game function in 64 KB of stack rules out a deep stack overflow
+and suggests the fault may not even be on the game thread. The offset can't
+be looked up: the log didn't say which module it was in (a driver DLL is
+possible), and release builds had no symbols.
+
+**Change:** the crash log now names the module the fault is in and the
+faulting thread (GetThreadDescription / pthread_getname_np), and Windows
+builds write `DinoTale.map` (linker map, build folder only, not shipped) so
+an offset in DinoTale.exe can be looked up. Asked the reporter for what was
+happening at the time and their settings.
+
 ## Round 34: Hybrid Dimming setting (issue #5)
 
 **Report:** on an ultrawide (21:9) screen Hybrid draws the background across

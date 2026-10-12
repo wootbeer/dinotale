@@ -76,10 +76,12 @@ namespace {
         return has_access && in_rdram(access) && (access - (uintptr_t)rdram_base) < 0x20000000ull;
     }
 
-    void report(FILE* out, const char* what, uintptr_t pc, uintptr_t module_base, bool has_access, uintptr_t access, bool write, const uintptr_t* stack, size_t stack_words) {
+    void report(FILE* out, const char* what, uintptr_t pc, uintptr_t module_base, const char* module_name, const char* thread_name,
+                bool has_access, uintptr_t access, bool write, const uintptr_t* stack, size_t stack_words) {
         fprintf(out, "DinoTale crashed.\n");
         fprintf(out, "Exception: %s\n", what);
-        fprintf(out, "Fault offset: 0x%" PRIxPTR "\n", pc - module_base);
+        fprintf(out, "Fault offset: 0x%" PRIxPTR " in %s\n", pc - module_base, (module_name != nullptr && module_name[0] != '\0') ? module_name : "(unknown module)");
+        fprintf(out, "Thread: %s\n", (thread_name != nullptr && thread_name[0] != '\0') ? thread_name : "(unnamed)");
         if (const GameFunc* f = find_game_func(pc)) {
             fprintf(out, "In game function: func_%08X (+0x%" PRIxPTR " host bytes)\n", f->vram, pc - f->host);
         }
@@ -127,7 +129,8 @@ namespace {
 #endif
     }
 
-    void write_reports(const char* what, uintptr_t pc, uintptr_t module_base, bool has_access, uintptr_t access, bool write, uintptr_t sp) {
+    void write_reports(const char* what, uintptr_t pc, uintptr_t module_base, const char* module_name, const char* thread_name,
+                       bool has_access, uintptr_t access, bool write, uintptr_t sp) {
         // Scan up to 64 KB of the faulting thread's stack (the handler runs on
         // that thread) for return addresses, never past its top.
         const uintptr_t* stack = reinterpret_cast<const uintptr_t*>(sp);
@@ -136,9 +139,9 @@ namespace {
         if (top > sp) {
             words = std::min<uintptr_t>(top - sp, 0x10000) / sizeof(uintptr_t);
         }
-        report(stderr, what, pc, module_base, has_access, access, write, stack, words);
+        report(stderr, what, pc, module_base, module_name, thread_name, has_access, access, write, stack, words);
         if (FILE* f = fopen("crash_log.txt", "w")) {
-            report(f, what, pc, module_base, has_access, access, write, stack, words);
+            report(f, what, pc, module_base, module_name, thread_name, has_access, access, write, stack, words);
             fclose(f);
         }
     }
@@ -168,7 +171,26 @@ namespace {
         if (is_shutdown_fault(has_access, has_access ? (uintptr_t)rec->ExceptionInformation[1] : 0)) {
             TerminateProcess(GetCurrentProcess(), 0);
         }
-        write_reports(exception_name(rec->ExceptionCode), pc, (uintptr_t)module, has_access,
+        // The module the fault is in (the exe, or a DLL such as a graphics driver), by file name.
+        char module_path[MAX_PATH] = {};
+        const char* module_name = nullptr;
+        if ((module != nullptr) && (GetModuleFileNameA(module, module_path, MAX_PATH) > 0)) {
+            const char* slash = strrchr(module_path, '\\');
+            module_name = (slash != nullptr) ? slash + 1 : module_path;
+        }
+
+        // The faulting thread's name, if it has one (GetThreadDescription, Windows 10 1607+).
+        char thread_name[128] = {};
+        using GetThreadDescriptionFn = HRESULT(WINAPI*)(HANDLE, PWSTR*);
+        if (auto get_description = (GetThreadDescriptionFn)(void*)GetProcAddress(GetModuleHandleA("kernel32.dll"), "GetThreadDescription")) {
+            PWSTR description = nullptr;
+            if (SUCCEEDED(get_description(GetCurrentThread(), &description)) && (description != nullptr)) {
+                WideCharToMultiByte(CP_UTF8, 0, description, -1, thread_name, sizeof(thread_name), nullptr, nullptr);
+                LocalFree(description);
+            }
+        }
+
+        write_reports(exception_name(rec->ExceptionCode), pc, (uintptr_t)module, module_name, thread_name, has_access,
             has_access ? (uintptr_t)rec->ExceptionInformation[1] : 0,
             has_access && rec->ExceptionInformation[0] == 1, (uintptr_t)info->ContextRecord->Rsp);
         MessageBoxA(nullptr,
@@ -192,7 +214,11 @@ namespace {
         }
         Dl_info dl{};
         uintptr_t module_base = dladdr((void*)pc, &dl) != 0 ? (uintptr_t)dl.dli_fbase : 0;
-        write_reports(what, pc, module_base, sig == SIGSEGV || sig == SIGBUS, (uintptr_t)info->si_addr, false, sp);
+        const char* module_name = (dl.dli_fname != nullptr) ? strrchr(dl.dli_fname, '/') : nullptr;
+        module_name = (module_name != nullptr) ? module_name + 1 : dl.dli_fname;
+        char thread_name[32] = {};
+        pthread_getname_np(pthread_self(), thread_name, sizeof(thread_name));
+        write_reports(what, pc, module_base, module_name, thread_name, sig == SIGSEGV || sig == SIGBUS, (uintptr_t)info->si_addr, false, sp);
         signal(sig, SIG_DFL);
         raise(sig);
     }
