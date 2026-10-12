@@ -46,7 +46,8 @@ Settings > Graphics > Aspect Ratio:
 - **Original:** the game's 4:3 picture, with black bars at the sides.
 - **Stretch:** the 4:3 picture stretched to fill the window.
 - **Hybrid** (experimental): backgrounds stretched to the window, sprites kept in shape in
-  the middle 4:3 area; the stretched sides are dimmed.
+  the middle 4:3 area; the stretched sides are dimmed (Hybrid Dimming sets
+  how much, down to not at all).
 - **Expand** (experimental): true widescreen. The game shows more of each level. Choose it
   before starting a level. HUD Placement sets whether the HUD moves out to
   the window edges.

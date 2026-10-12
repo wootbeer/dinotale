@@ -6,6 +6,21 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 34: Hybrid Dimming setting (issue #5)
+
+**Report:** on an ultrawide (21:9) screen Hybrid draws the background across
+the whole window but dims the sides; the reporter would like them undimmed.
+
+**Change:** Settings > Graphics > Hybrid Dimming, a percent slider (default
+88%, the 0.1.0 look; 0% leaves the sides undimmed). Disabled unless the
+aspect ratio is Hybrid. `src/main/display_options.cpp` (was
+`screen_filter.cpp`) hands it to RT64 every VI
+(`RT64::setHybridSideBrightness`, `rt64/0018`).
+
+Checked in a 21:9 window: Hybrid's background fills it edge to edge, and
+the dimming covers both sides. Expand stays capped at 16:9 (wider needs
+larger background buffers in the game's memory; not done).
+
 ## Round 33: screen filters (issue #1)
 
 **Request:** texture filtering such as xBRZ and HQ2x/3x/4x.

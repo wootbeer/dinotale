@@ -58,9 +58,9 @@ extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 // relocatable overlays.
 void register_dinotale_overlays();
 
-// screen_filter.cpp: Settings > Graphics > Screen Filter.
-void dinotale_add_screen_filter_option(recomp::config::Config &config);
-void dinotale_update_screen_filter();
+// display_options.cpp: Settings > Graphics > Screen Filter, Hybrid Dimming.
+void dinotale_add_display_options(recomp::config::Config &config);
+void dinotale_update_display_options();
 
 // rom_archive.cpp: the game's ROM from a .zip or .7z, or nothing.
 std::vector<uint8_t> dinotale_read_rom_archive(const std::vector<uint8_t>& file_data);
@@ -317,10 +317,10 @@ static ultramodern::input::connected_device_info_t get_connected_device_info(int
 
 // --- Misc callbacks -----------------------------------------------------
 
-// Every VI (frame): rumble, and the screen filter setting for the renderer.
+// Every VI (frame): rumble, and DinoTale's display settings for the renderer.
 static void on_vi() {
     recompinput::update_rumble();
-    dinotale_update_screen_filter();
+    dinotale_update_display_options();
 }
 
 static std::string get_game_thread_name(const OSThread* t) {
@@ -445,7 +445,7 @@ int main(int argc, char** argv) {
     // created and finalized here, before recomp::start().
     recompui::config::GeneralTabOptions general_tab_options{};
     recompui::config::create_general_tab(general_tab_options);
-    dinotale_add_screen_filter_option(recompui::config::create_graphics_tab());
+    dinotale_add_display_options(recompui::config::create_graphics_tab());
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();

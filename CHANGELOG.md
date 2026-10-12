@@ -9,6 +9,8 @@
 - The Resolution setting's description says what each option renders at.
 - Screen filters (Settings > Graphics > Screen Filter): CRT (flat, no
   curve), Scanlines, LCD, and the xBR, xBRZ and HQ2x pixel-art upscalers.
+- Hybrid Dimming slider (Settings > Graphics): how dark Hybrid's stretched
+  sides are, from 0% (not dimmed) up; the default is the 0.1.0 look.
 
 ## 0.1.0
 

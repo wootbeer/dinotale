@@ -1,0 +1,44 @@
+diff --git a/src/render/rt64_screen_filter.h b/src/render/rt64_screen_filter.h
+index bf8bd6d..553bd47 100644
+--- a/src/render/rt64_screen_filter.h
++++ b/src/render/rt64_screen_filter.h
+@@ -21,4 +21,9 @@ namespace RT64 {
+ 
+     void setScreenFilter(ScreenFilter filter);
+     ScreenFilter getScreenFilter();
++
++    // DinoTale "Hybrid": the brightness of the stretched sides outside the 4:3 screen, from 0
++    // (black) to 1 (not dimmed). Safe to set from any thread.
++    void setHybridSideBrightness(float brightness);
++    float getHybridSideBrightness();
+ };
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index 31f2d56..3047f24 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -26,6 +26,16 @@ namespace RT64 {
+         return ScreenFilter(screenFilter.load(std::memory_order_relaxed));
+     }
+ 
++    static std::atomic<float> hybridSideBrightness{ 0.12f };
++
++    void setHybridSideBrightness(float brightness) {
++        hybridSideBrightness.store(std::clamp(brightness, 0.0f, 1.0f), std::memory_order_relaxed);
++    }
++
++    float getHybridSideBrightness() {
++        return hybridSideBrightness.load(std::memory_order_relaxed);
++    }
++
+     // VIRenderer
+ 
+     VIRenderer::VIRenderer() { }
+@@ -106,7 +116,7 @@ namespace RT64 {
+             // The game's screen is 4:3 in the middle of the widened picture.
+             const float pictureAspect = float(pushConstants.videoResolution.x) / float(pushConstants.videoResolution.y);
+             pushConstants.centerFraction = std::min((4.0f / 3.0f) / pictureAspect, 1.0f);
+-            pushConstants.sideBrightness = 0.12f;
++            pushConstants.sideBrightness = getHybridSideBrightness();
+         }
+ 
+         // Screen filters work in N64 pixels. A 480-line frame is two interlaced
