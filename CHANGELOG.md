@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.1
 
 - The game can be picked inside a `.zip` or `.7z` archive.
 - Expand: Yoshi can walk all the way to the edge of the screen where the
