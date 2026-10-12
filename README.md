@@ -15,6 +15,7 @@ included:** you need your own copy of the game.
 - **Widescreen:** play in 4:3, stretched, or true widescreen (Expand) that
   shows more of each level, up to 16:9.
 - HUD at the edges of the window in widescreen, or kept in its original place.
+- Screen filters: CRT, scanlines, LCD, and the xBR, xBRZ and HQ2x upscalers.
 - Keyboard and controller support with remappable controls.
 - Saves and sound.
 

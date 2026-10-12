@@ -6,6 +6,32 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 33: screen filters (issue #1)
+
+**Request:** texture filtering such as xBRZ and HQ2x/3x/4x.
+
+**Change:** Settings > Graphics > Screen Filter: None, CRT, Scanlines, LCD,
+xBR, xBRZ, HQ2x. All drawn in RT64's VI pass (`rt64/0017`), on the frame's
+grid of N64 pixels so they look the same at any resolution setting, with the
+picture still read at full resolution:
+
+- CRT, Scanlines and LCD come from the Turok: Rage Wars port's patch (same
+  RT64 setup): Lottes' public-domain CRT shader without the tube curve, a
+  cosine scanline dip, LCD3x (public domain).
+- xBR (Hyllian's xBR-lv2, MIT), xBRZ (freescale, MIT shader, GPL-3 xBRZ
+  algorithm) and HQ2x (Lior Halphon's, MIT) are ported from libretro's
+  glsl-shaders to HLSL. Their notices are in the shader and in
+  `licenses/screen-filters.txt`, which the release packages include.
+- In a widened picture (Expand, Hybrid) the N64 pixels stay square, so the
+  grid is wider; Hybrid's dimmed sides still apply.
+- HQ3x/HQ4x need lookup-table textures in libretro's versions, a second
+  texture in the VI pass; not done yet.
+
+`src/main/screen_filter.cpp` adds the option to the graphics tab and hands it
+to RT64 every VI (`RT64::setScreenFilter`). `cmake/ApplyLibPatches.cmake` now
+removes files a patch adds before applying the set again (as in the Turok
+port), since resetting the submodule only restores tracked files.
+
 ## Round 32: Expand, invisible wall short of the screen edge (issue #4)
 
 **Report:** in level 3-2 in widescreen, Yoshi can't enter the outer edge of

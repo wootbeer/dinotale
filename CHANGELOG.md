@@ -7,6 +7,8 @@
   camera stops (an invisible wall used to stop him short, e.g. in 3-2).
 - Hybrid and Expand are marked experimental in the settings.
 - The Resolution setting's description says what each option renders at.
+- Screen filters (Settings > Graphics > Screen Filter): CRT (flat, no
+  curve), Scanlines, LCD, and the xBR, xBRZ and HQ2x pixel-art upscalers.
 
 ## 0.1.0
 

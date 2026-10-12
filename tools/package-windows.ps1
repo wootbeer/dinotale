@@ -66,6 +66,7 @@ $licenses = [ordered]@{
     "SlotMap"               = "lib\RecompFrontend\lib\SlotMap\slot_map.h"
     "DirectXShaderCompiler" = "licenses\DirectXShaderCompiler.txt"
     "LZMA-SDK"              = "thirdparty\lzma-sdk\lzma-sdk.txt"
+    "screen-filters"        = "licenses\screen-filters.txt"
 }
 foreach ($entry in $licenses.GetEnumerator()) {
     if (Test-Path $entry.Value) {

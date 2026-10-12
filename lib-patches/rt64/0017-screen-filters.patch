@@ -1,0 +1,645 @@
+diff --git a/src/render/rt64_screen_filter.h b/src/render/rt64_screen_filter.h
+new file mode 100644
+index 0000000..bf8bd6d
+--- /dev/null
++++ b/src/render/rt64_screen_filter.h
+@@ -0,0 +1,24 @@
++//
++// RT64
++//
++
++#pragma once
++
++#include <cstdint>
++
++namespace RT64 {
++    // Post-process filters for the final picture, applied by the VI pass
++    // (shaders/VideoInterfacePS.hlsl). Safe to set from any thread.
++    enum class ScreenFilter : uint32_t {
++        None = 0,
++        CRT = 1, // Timothy Lottes' CRT shader, flat (no tube curve)
++        Scanlines = 2,
++        LCD = 3, // LCD3x, a handheld LCD grid
++        XBR = 4, // Hyllian's xBR-lv2
++        XBRZ = 5, // xBRZ freescale
++        HQ2x = 6, // Lior Halphon's HQ2x
++    };
++
++    void setScreenFilter(ScreenFilter filter);
++    ScreenFilter getScreenFilter();
++};
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+index ef6ac75..31f2d56 100644
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -3,6 +3,9 @@
+ //
+ 
+ #include "rt64_vi_renderer.h"
++#include "rt64_screen_filter.h"
++
++#include <atomic>
+ 
+ #include <algorithm>
+ #include <cmath>
+@@ -11,6 +14,18 @@
+ #include "shared/rt64_video_interface.h"
+ 
+ namespace RT64 {
++    // Screen filter
++
++    static std::atomic<uint32_t> screenFilter{ uint32_t(ScreenFilter::None) };
++
++    void setScreenFilter(ScreenFilter filter) {
++        screenFilter.store(uint32_t(filter), std::memory_order_relaxed);
++    }
++
++    ScreenFilter getScreenFilter() {
++        return ScreenFilter(screenFilter.load(std::memory_order_relaxed));
++    }
++
+     // VIRenderer
+ 
+     VIRenderer::VIRenderer() { }
+@@ -94,6 +109,23 @@ namespace RT64 {
+             pushConstants.sideBrightness = 0.12f;
+         }
+ 
++        // Screen filters work in N64 pixels. A 480-line frame is two interlaced
++        // fields of 240, so it gets 240 lines like the rest. In a widened picture
++        // (Expand, Hybrid) the pixels stay square, so there are more of them across.
++        pushConstants.screenFilter = uint32_t(getScreenFilter());
++        const hlslpp::uint2 fbSize = p.vi->fbSize();
++        float sourceHeight = float(fbSize.y);
++        if (sourceHeight > 300.0f) {
++            sourceHeight /= 2.0f;
++        }
++        float sourceWidth = float(fbSize.x);
++        if ((pushConstants.videoResolution.y > 0.0f) && (fbSize.y > 0)) {
++            const float pictureAspect = float(pushConstants.videoResolution.x) / float(pushConstants.videoResolution.y);
++            const float frameAspect = float(fbSize.x) / float(fbSize.y);
++            sourceWidth *= std::max(pictureAspect / frameAspect, 1.0f);
++        }
++        pushConstants.sourceResolution = { sourceWidth, sourceHeight };
++
+         p.commandList->setPipeline(shader->pipeline.get());
+         p.commandList->setGraphicsPipelineLayout(shader->pipelineLayout.get());
+         p.commandList->setGraphicsDescriptorSet(descriptorSet->get(), 0);
+diff --git a/src/shaders/VideoInterfacePS.hlsl b/src/shaders/VideoInterfacePS.hlsl
+index 305d1cb..830308d 100644
+--- a/src/shaders/VideoInterfacePS.hlsl
++++ b/src/shaders/VideoInterfacePS.hlsl
+@@ -36,7 +36,540 @@ float4 PixelAntialiasing(float2 uv) {
+     return SampleInput(uvTexspace / gConstants.textureResolution);
+ }
+ 
++
++// Screen filters (gConstants.screenFilter, RT64::ScreenFilter). They work in
++// N64 pixels (sourceResolution) so the lines match the original picture at any
++// resolution scale, while the picture itself is still read at full resolution.
++// CRT, Scanlines and LCD come from the Turok: Rage Wars port; xBR, xBRZ and
++// HQ2x are ported from libretro's glsl-shaders, licences kept above each.
++
++float3 SampleSource(float2 srcPos) {
++    return SampleInput((srcPos / gConstants.sourceResolution) * (gConstants.videoResolution / gConstants.textureResolution)).rgb;
++}
++
++float3 ToLinear(float3 c) { return pow(max(c, 0.0f), 2.2f); }
++float3 ToSrgb(float3 c) { return pow(max(c, 0.0f), 1.0f / 2.2f); }
++
++// How strongly a filter's lines may show: fades them out once a line is less
++// than about two screen pixels tall, where they would only alias.
++float LineVisibility(float2 srcPos) {
++    return saturate(2.0f - 2.0f * fwidth(srcPos.y) * 2.0f);
++}
++
++//
++// CRT: from Timothy Lottes' PUBLIC DOMAIN CRT shader (libretro crt-lottes,
++// hardScan -8, hardPix -3, mask 0.5/1.5, shadowMask 3, bloom 0.15), flat: the
++// tube curve (warp) is left out. Horizontally the picture is read at full
++// resolution instead of being rebuilt from N64 pixels.
++//
++static const float CrtHardScan = -8.0f;
++static const float CrtHardBloomScan = -2.0f;
++static const float CrtBloomAmount = 0.15f;
++static const float CrtMaskDark = 0.5f;
++static const float CrtMaskLight = 1.5f;
++
++float CrtGaus(float pos, float scale) { return exp2(scale * pos * pos); }
++
++float3 CrtLine(float2 srcPos, float offset) {
++    return ToLinear(SampleSource(float2(srcPos.x, floor(srcPos.y) + 0.5f + offset)));
++}
++
++float3 CrtLineWide(float2 srcPos, float offset) {
++    float y = floor(srcPos.y) + 0.5f + offset;
++    float3 c = 0.0f;
++    float wsum = 0.0f;
++    [unroll]
++    for (int i = -2; i <= 2; i++) {
++        float w = CrtGaus(float(i), -1.5f);
++        c += ToLinear(SampleSource(float2(srcPos.x + float(i), y))) * w;
++        wsum += w;
++    }
++    return c / wsum;
++}
++
++float3 CrtMask(float2 screenPos) {
++    // Lottes shadowMask 3: stretched VGA-style aperture.
++    float3 mask = CrtMaskDark;
++    float x = frac((screenPos.x + screenPos.y * 3.0f) / 6.0f);
++    if (x < 0.333f) mask.r = CrtMaskLight;
++    else if (x < 0.666f) mask.g = CrtMaskLight;
++    else mask.b = CrtMaskLight;
++    return mask;
++}
++
++float3 FilterCrt(float2 srcPos, float2 screenPos) {
++    float dy = srcPos.y - (floor(srcPos.y) + 0.5f);
++    float visibility = LineVisibility(srcPos);
++    float hardScan = lerp(-0.5f, CrtHardScan, visibility);
++
++    // Three lines, weighted by how far the beam is from each (Lottes Tri).
++    float wa = CrtGaus(dy + 1.0f, hardScan);
++    float wb = CrtGaus(dy, hardScan);
++    float wc = CrtGaus(dy - 1.0f, hardScan);
++    float3 color = CrtLine(srcPos, -1.0f) * wa + CrtLine(srcPos, 0.0f) * wb + CrtLine(srcPos, 1.0f) * wc;
++
++    // Glow from the five nearest lines (Lottes Bloom).
++    float3 bloom = 0.0f;
++    [unroll]
++    for (int i = -2; i <= 2; i++) {
++        bloom += CrtLineWide(srcPos, float(i)) * CrtGaus(dy - float(i), CrtHardBloomScan);
++    }
++
++    color += bloom * CrtBloomAmount;
++    color *= lerp(1.0f, CrtMask(screenPos), visibility);
++    return ToSrgb(color);
++}
++
++//
++// Scanlines: dark gaps between the N64's lines, nothing else.
++//
++float3 FilterScanlines(float2 srcPos) {
++    float3 color = ToLinear(SampleSource(srcPos));
++    float dy = srcPos.y - (floor(srcPos.y) + 0.5f);
++    float beam = 0.5f + 0.5f * cos(6.2831853f * dy);
++    float shade = lerp(1.0f, lerp(0.35f, 1.15f, beam), LineVisibility(srcPos));
++    return ToSrgb(color * shade);
++}
++
++//
++// LCD: from LCD3x by Gigaherz (PUBLIC DOMAIN, libretro lcd3x), a handheld LCD
++// grid of red, green and blue stripes with faint gaps between rows.
++//
++static const float LcdBrightenScanlines = 16.0f;
++static const float LcdBrightenLcd = 4.0f;
++
++float3 FilterLcd(float2 srcPos) {
++    const float3 offsets = 3.1415926f * float3(0.5f, 0.5f - 2.0f / 3.0f, 0.5f - 4.0f / 3.0f);
++    float2 angle = srcPos * 6.2831853f;
++    float yfactor = (LcdBrightenScanlines + sin(angle.y)) / (LcdBrightenScanlines + 1.0f);
++    float3 xfactors = (LcdBrightenLcd + sin(angle.x + offsets)) / (LcdBrightenLcd + 1.0f);
++    float3 grid = lerp(1.0f, yfactor * xfactors, LineVisibility(srcPos));
++    return SampleSource(srcPos) * grid;
++}
++
++// One N64 pixel, `offset` pixels from `cell` (the pixel being drawn), read at
++// its centre and clamped to the picture.
++float3 SourcePixel(float2 cell, float2 offset) {
++    float2 p = clamp(cell + offset, 0.0f, gConstants.sourceResolution - 1.0f);
++    return SampleSource(p + 0.5f);
++}
++
++/*
++   xBR-lv2 (libretro glsl-shaders xbr/shaders/xbr-lv2.glsl), CORNER_C with
++   smooth tips, ported to HLSL. The edge width follows the output scale.
++
++   Hyllian's xBR-lv2 Shader
++
++   Copyright (C) 2011-2016 Hyllian - sergiogdb@gmail.com
++
++   Permission is hereby granted, free of charge, to any person obtaining a copy
++   of this software and associated documentation files (the "Software"), to deal
++   in the Software without restriction, including without limitation the rights
++   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++   copies of the Software, and to permit persons to whom the Software is
++   furnished to do so, subject to the following conditions:
++
++   The above copyright notice and this permission notice shall be included in
++   all copies or substantial portions of the Software.
++
++   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++   THE SOFTWARE.
++*/
++static const float XbrEqThreshold = 15.0f;
++static const float XbrLv2Coefficient = 2.0f;
++static const float3 XbrRgbw = float3(14.352f, 28.176f, 5.472f);
++
++float4 XbrDf(float4 a, float4 b) { return abs(a - b); }
++float4 XbrDiff(float4 a, float4 b) { return float4(a != b); }
++float4 XbrEq(float4 a, float4 b) { return step(XbrDf(a, b), XbrEqThreshold); }
++float4 XbrNeq(float4 a, float4 b) { return 1.0f - XbrEq(a, b); }
++float4 XbrWd(float4 a, float4 b, float4 c, float4 d, float4 e, float4 f, float4 g, float4 h) {
++    return XbrDf(a, b) + XbrDf(a, c) + XbrDf(d, e) + XbrDf(d, f) + 4.0f * XbrDf(g, h);
++}
++float XbrCDf(float3 c1, float3 c2) { float3 d = abs(c1 - c2); return d.r + d.g + d.b; }
++
++float3 FilterXbr(float2 srcPos) {
++    const float4 Ao = float4(1.0f, -1.0f, -1.0f, 1.0f);
++    const float4 Bo = float4(1.0f, 1.0f, -1.0f, -1.0f);
++    const float4 Co = float4(1.5f, 0.5f, -0.5f, 0.5f);
++    const float4 Ax = float4(1.0f, -1.0f, -1.0f, 1.0f);
++    const float4 Bx = float4(0.5f, 2.0f, -0.5f, -2.0f);
++    const float4 Cx = float4(1.0f, 1.0f, -0.5f, 0.0f);
++    const float4 Ay = float4(1.0f, -1.0f, -1.0f, 1.0f);
++    const float4 By = float4(2.0f, 0.5f, -2.0f, -0.5f);
++    const float4 Cy = float4(2.0f, 0.0f, -1.0f, 0.5f);
++    const float4 Ci = float4(0.25f, 0.25f, 0.25f, 0.25f);
++
++    // XBR_SCALE: screen pixels per N64 pixel.
++    float scale = clamp(1.0f / max(fwidth(srcPos.y), 1e-4f), 2.0f, 8.0f);
++    float4 delta = 1.0f / scale;
++    float4 delta_l = float4(0.5f, 1.0f, 0.5f, 1.0f) / scale;
++    float4 delta_u = delta_l.yxwz;
++
++    float2 cell = floor(srcPos);
++    float2 fp = srcPos - cell;
++    float3 A1 = SourcePixel(cell, float2(-1, -2)), B1 = SourcePixel(cell, float2(0, -2)), C1 = SourcePixel(cell, float2(1, -2));
++    float3 A = SourcePixel(cell, float2(-1, -1)), B = SourcePixel(cell, float2(0, -1)), C = SourcePixel(cell, float2(1, -1));
++    float3 D = SourcePixel(cell, float2(-1, 0)), E = SourcePixel(cell, float2(0, 0)), F = SourcePixel(cell, float2(1, 0));
++    float3 G = SourcePixel(cell, float2(-1, 1)), H = SourcePixel(cell, float2(0, 1)), I = SourcePixel(cell, float2(1, 1));
++    float3 G5 = SourcePixel(cell, float2(-1, 2)), H5 = SourcePixel(cell, float2(0, 2)), I5 = SourcePixel(cell, float2(1, 2));
++    float3 A0 = SourcePixel(cell, float2(-2, -1)), D0 = SourcePixel(cell, float2(-2, 0)), G0 = SourcePixel(cell, float2(-2, 1));
++    float3 C4 = SourcePixel(cell, float2(2, -1)), F4 = SourcePixel(cell, float2(2, 0)), I4 = SourcePixel(cell, float2(2, 1));
++
++    float4 b = float4(dot(B, XbrRgbw), dot(D, XbrRgbw), dot(H, XbrRgbw), dot(F, XbrRgbw));
++    float4 c = float4(dot(C, XbrRgbw), dot(A, XbrRgbw), dot(G, XbrRgbw), dot(I, XbrRgbw));
++    float4 d = b.yzwx;
++    float4 e = dot(E, XbrRgbw);
++    float4 f = b.wxyz;
++    float4 g = c.zwxy;
++    float4 h = b.zwxy;
++    float4 i = c.wxyz;
++    float4 i4 = float4(dot(I4, XbrRgbw), dot(C1, XbrRgbw), dot(A0, XbrRgbw), dot(G5, XbrRgbw));
++    float4 i5 = float4(dot(I5, XbrRgbw), dot(C4, XbrRgbw), dot(A1, XbrRgbw), dot(G0, XbrRgbw));
++    float4 h5 = float4(dot(H5, XbrRgbw), dot(F4, XbrRgbw), dot(B1, XbrRgbw), dot(D0, XbrRgbw));
++    float4 f4 = h5.yzwx;
++
++    float4 fx = Ao * fp.y + Bo * fp.x;
++    float4 fx_l = Ax * fp.y + Bx * fp.x;
++    float4 fx_u = Ay * fp.y + By * fp.x;
++
++    float4 irlv0 = XbrDiff(e, f) * XbrDiff(e, h);
++    float4 irlv1 = irlv0 * (XbrNeq(f, b) * XbrNeq(f, c) + XbrNeq(h, d) * XbrNeq(h, g) + XbrEq(e, i) * (XbrNeq(f, f4) * XbrNeq(f, i4) + XbrNeq(h, h5) * XbrNeq(h, i5)) + XbrEq(e, g) + XbrEq(e, c));
++    float4 irlv2l = XbrDiff(e, g) * XbrDiff(d, g);
++    float4 irlv2u = XbrDiff(e, c) * XbrDiff(b, c);
++
++    float4 fx45i = saturate((fx + delta - Co - Ci) / (2.0f * delta));
++    float4 fx45 = saturate((fx + delta - Co) / (2.0f * delta));
++    float4 fx30 = saturate((fx_l + delta_l - Cx) / (2.0f * delta_l));
++    float4 fx60 = saturate((fx_u + delta_u - Cy) / (2.0f * delta_u));
++
++    float4 wd1 = XbrWd(e, c, g, i, h5, f4, h, f);
++    float4 wd2 = XbrWd(h, d, i5, f, i4, b, e, i);
++
++    float4 edri = step(wd1, wd2) * irlv0;
++    float4 edr = step(wd1 + 0.1f, wd2) * step(0.5f, irlv1);
++    float4 edr_l = step(XbrLv2Coefficient * XbrDf(f, g), XbrDf(h, c)) * irlv2l * edr;
++    float4 edr_u = step(XbrLv2Coefficient * XbrDf(h, c), XbrDf(f, g)) * irlv2u * edr;
++
++    fx45 = edr * fx45;
++    fx30 = edr_l * fx30;
++    fx60 = edr_u * fx60;
++    fx45i = edri * fx45i;
++
++    float4 px = step(XbrDf(e, f), XbrDf(e, h));
++    float4 maximos = max(max(fx30, fx60), max(fx45, fx45i));
++
++    float3 res1 = E;
++    res1 = lerp(res1, lerp(H, F, px.x), maximos.x);
++    res1 = lerp(res1, lerp(B, D, px.z), maximos.z);
++    float3 res2 = E;
++    res2 = lerp(res2, lerp(F, B, px.y), maximos.y);
++    res2 = lerp(res2, lerp(D, H, px.w), maximos.w);
++    return lerp(res1, res2, step(XbrCDf(E, res1), XbrCDf(E, res2)));
++}
++
++/*
++   xBRZ freescale (libretro glsl-shaders xbrz/shaders/xbrz-freescale.glsl),
++   ported to HLSL.
++
++   Hyllian's xBR-vertex code and texel mapping
++
++   Copyright (C) 2011/2016 Hyllian - sergiogdb@gmail.com
++
++   Permission is hereby granted, free of charge, to any person obtaining a copy
++   of this software and associated documentation files (the "Software"), to deal
++   in the Software without restriction, including without limitation the rights
++   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++   copies of the Software, and to permit persons to whom the Software is
++   furnished to do so, subject to the following conditions:
++
++   The above copyright notice and this permission notice shall be included in
++   all copies or substantial portions of the Software.
++
++   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
++   THE SOFTWARE.
++
++   The xBRZ algorithm it implements is from the xBRZ scaler (Zenju, also in the
++   Desmume source code), GNU General Public License v3: http://www.gnu.org/licenses/gpl-3.0
++*/
++static const int XbrzBlendNone = 0;
++static const int XbrzBlendNormal = 1;
++static const int XbrzBlendDominant = 2;
++static const float XbrzLuminanceWeight = 1.0f;
++static const float XbrzEqualColorTolerance = 30.0f / 255.0f;
++static const float XbrzSteepDirectionThreshold = 2.2f;
++static const float XbrzDominantDirectionThreshold = 3.6f;
++
++float XbrzDist(float3 pixA, float3 pixB) {
++    const float3 w = float3(0.2627f, 0.6780f, 0.0593f);
++    const float scaleB = 0.5f / (1.0f - w.b);
++    const float scaleR = 0.5f / (1.0f - w.r);
++    float3 diff = pixA - pixB;
++    float Y = dot(diff.rgb, w);
++    float Cb = scaleB * (diff.b - Y);
++    float Cr = scaleR * (diff.r - Y);
++    return sqrt(((XbrzLuminanceWeight * Y) * (XbrzLuminanceWeight * Y)) + (Cb * Cb) + (Cr * Cr));
++}
++
++bool XbrzPixEqual(float3 pixA, float3 pixB) { return XbrzDist(pixA, pixB) < XbrzEqualColorTolerance; }
++bool XbrzEq(float3 a, float3 b) { return all(a == b); }
++bool XbrzNeq(float3 a, float3 b) { return any(a != b); }
++
++float XbrzLeftRatio(float2 center, float2 origin, float2 direction, float2 scale) {
++    float2 P0 = center - origin;
++    float2 proj = direction * (dot(P0, direction) / dot(direction, direction));
++    float2 distv = P0 - proj;
++    float2 orth = float2(-direction.y, direction.x);
++    float side = sign(dot(P0, orth));
++    float v = side * length(distv * scale);
++    return smoothstep(-sqrt(2.0f) / 2.0f, sqrt(2.0f) / 2.0f, v);
++}
++
++float3 FilterXbrz(float2 srcPos) {
++    float2 scale = 1.0f / max(fwidth(srcPos), 1e-4f);
++    float2 cell = floor(srcPos);
++    float2 pos = srcPos - cell - 0.5f;
++#define XP(x, y) SourcePixel(cell, float2(x, y))
++    float3 A = XP(-1, -1), B = XP(0, -1), C = XP(1, -1);
++    float3 D = XP(-1, 0), E = XP(0, 0), F = XP(1, 0);
++    float3 G = XP(-1, 1), H = XP(0, 1), I = XP(1, 1);
++
++    int4 blendResult = int4(XbrzBlendNone, XbrzBlendNone, XbrzBlendNone, XbrzBlendNone);
++    if (!((XbrzEq(E, F) && XbrzEq(H, I)) || (XbrzEq(E, H) && XbrzEq(F, I)))) {
++        float dist_H_F = XbrzDist(G, E) + XbrzDist(E, C) + XbrzDist(XP(0, 2), I) + XbrzDist(I, XP(2, 0)) + (4.0f * XbrzDist(H, F));
++        float dist_E_I = XbrzDist(D, H) + XbrzDist(H, XP(1, 2)) + XbrzDist(B, F) + XbrzDist(F, XP(2, 1)) + (4.0f * XbrzDist(E, I));
++        bool dominantGradient = (XbrzDominantDirectionThreshold * dist_H_F) < dist_E_I;
++        blendResult.z = ((dist_H_F < dist_E_I) && XbrzNeq(E, F) && XbrzNeq(E, H)) ? (dominantGradient ? XbrzBlendDominant : XbrzBlendNormal) : XbrzBlendNone;
++    }
++    if (!((XbrzEq(D, E) && XbrzEq(G, H)) || (XbrzEq(D, G) && XbrzEq(E, H)))) {
++        float dist_G_E = XbrzDist(XP(-2, 1), D) + XbrzDist(D, B) + XbrzDist(XP(-1, 2), H) + XbrzDist(H, F) + (4.0f * XbrzDist(G, E));
++        float dist_D_H = XbrzDist(XP(-2, 0), G) + XbrzDist(G, XP(0, 2)) + XbrzDist(A, E) + XbrzDist(E, I) + (4.0f * XbrzDist(D, H));
++        bool dominantGradient = (XbrzDominantDirectionThreshold * dist_D_H) < dist_G_E;
++        blendResult.w = ((dist_G_E > dist_D_H) && XbrzNeq(E, D) && XbrzNeq(E, H)) ? (dominantGradient ? XbrzBlendDominant : XbrzBlendNormal) : XbrzBlendNone;
++    }
++    if (!((XbrzEq(B, C) && XbrzEq(E, F)) || (XbrzEq(B, E) && XbrzEq(C, F)))) {
++        float dist_E_C = XbrzDist(D, B) + XbrzDist(B, XP(1, -2)) + XbrzDist(H, F) + XbrzDist(F, XP(2, -1)) + (4.0f * XbrzDist(E, C));
++        float dist_B_F = XbrzDist(A, E) + XbrzDist(E, I) + XbrzDist(XP(0, -2), C) + XbrzDist(C, XP(2, 0)) + (4.0f * XbrzDist(B, F));
++        bool dominantGradient = (XbrzDominantDirectionThreshold * dist_B_F) < dist_E_C;
++        blendResult.y = ((dist_E_C > dist_B_F) && XbrzNeq(E, B) && XbrzNeq(E, F)) ? (dominantGradient ? XbrzBlendDominant : XbrzBlendNormal) : XbrzBlendNone;
++    }
++    if (!((XbrzEq(A, B) && XbrzEq(D, E)) || (XbrzEq(A, D) && XbrzEq(B, E)))) {
++        float dist_D_B = XbrzDist(XP(-2, 0), A) + XbrzDist(A, XP(0, -2)) + XbrzDist(G, E) + XbrzDist(E, C) + (4.0f * XbrzDist(D, B));
++        float dist_A_E = XbrzDist(XP(-2, -1), D) + XbrzDist(D, H) + XbrzDist(XP(-1, -2), B) + XbrzDist(B, F) + (4.0f * XbrzDist(A, E));
++        bool dominantGradient = (XbrzDominantDirectionThreshold * dist_D_B) < dist_A_E;
++        blendResult.x = ((dist_D_B < dist_A_E) && XbrzNeq(E, D) && XbrzNeq(E, B)) ? (dominantGradient ? XbrzBlendDominant : XbrzBlendNormal) : XbrzBlendNone;
++    }
++#undef XP
++
++    float3 res = E;
++    if (blendResult.z != XbrzBlendNone) {
++        float dist_F_G = XbrzDist(F, G);
++        float dist_H_C = XbrzDist(H, C);
++        bool doLineBlend = (blendResult.z == XbrzBlendDominant ||
++            !((blendResult.y != XbrzBlendNone && !XbrzPixEqual(E, G)) || (blendResult.w != XbrzBlendNone && !XbrzPixEqual(E, C)) ||
++              (XbrzPixEqual(G, H) && XbrzPixEqual(H, I) && XbrzPixEqual(I, F) && XbrzPixEqual(F, C) && !XbrzPixEqual(E, I))));
++        float2 origin = float2(0.0f, 1.0f / sqrt(2.0f));
++        float2 direction = float2(1.0f, -1.0f);
++        if (doLineBlend) {
++            bool haveShallowLine = (XbrzSteepDirectionThreshold * dist_F_G <= dist_H_C) && XbrzNeq(E, G) && XbrzNeq(D, G);
++            bool haveSteepLine = (XbrzSteepDirectionThreshold * dist_H_C <= dist_F_G) && XbrzNeq(E, C) && XbrzNeq(B, C);
++            origin = haveShallowLine ? float2(0.0f, 0.25f) : float2(0.0f, 0.5f);
++            direction.x += haveShallowLine ? 1.0f : 0.0f;
++            direction.y -= haveSteepLine ? 1.0f : 0.0f;
++        }
++        float3 blendPix = lerp(H, F, step(XbrzDist(E, F), XbrzDist(E, H)));
++        res = lerp(res, blendPix, XbrzLeftRatio(pos, origin, direction, scale));
++    }
++    if (blendResult.w != XbrzBlendNone) {
++        float dist_H_A = XbrzDist(H, A);
++        float dist_D_I = XbrzDist(D, I);
++        bool doLineBlend = (blendResult.w == XbrzBlendDominant ||
++            !((blendResult.z != XbrzBlendNone && !XbrzPixEqual(E, A)) || (blendResult.x != XbrzBlendNone && !XbrzPixEqual(E, I)) ||
++              (XbrzPixEqual(A, D) && XbrzPixEqual(D, G) && XbrzPixEqual(G, H) && XbrzPixEqual(H, I) && !XbrzPixEqual(E, G))));
++        float2 origin = float2(-1.0f / sqrt(2.0f), 0.0f);
++        float2 direction = float2(1.0f, 1.0f);
++        if (doLineBlend) {
++            bool haveShallowLine = (XbrzSteepDirectionThreshold * dist_H_A <= dist_D_I) && XbrzNeq(E, A) && XbrzNeq(B, A);
++            bool haveSteepLine = (XbrzSteepDirectionThreshold * dist_D_I <= dist_H_A) && XbrzNeq(E, I) && XbrzNeq(F, I);
++            origin = haveShallowLine ? float2(-0.25f, 0.0f) : float2(-0.5f, 0.0f);
++            direction.y += haveShallowLine ? 1.0f : 0.0f;
++            direction.x += haveSteepLine ? 1.0f : 0.0f;
++        }
++        float3 blendPix = lerp(H, D, step(XbrzDist(E, D), XbrzDist(E, H)));
++        res = lerp(res, blendPix, XbrzLeftRatio(pos, origin, direction, scale));
++    }
++    if (blendResult.y != XbrzBlendNone) {
++        float dist_B_I = XbrzDist(B, I);
++        float dist_F_A = XbrzDist(F, A);
++        bool doLineBlend = (blendResult.y == XbrzBlendDominant ||
++            !((blendResult.x != XbrzBlendNone && !XbrzPixEqual(E, I)) || (blendResult.z != XbrzBlendNone && !XbrzPixEqual(E, A)) ||
++              (XbrzPixEqual(I, F) && XbrzPixEqual(F, C) && XbrzPixEqual(C, B) && XbrzPixEqual(B, A) && !XbrzPixEqual(E, C))));
++        float2 origin = float2(1.0f / sqrt(2.0f), 0.0f);
++        float2 direction = float2(-1.0f, -1.0f);
++        if (doLineBlend) {
++            bool haveShallowLine = (XbrzSteepDirectionThreshold * dist_B_I <= dist_F_A) && XbrzNeq(E, I) && XbrzNeq(H, I);
++            bool haveSteepLine = (XbrzSteepDirectionThreshold * dist_F_A <= dist_B_I) && XbrzNeq(E, A) && XbrzNeq(D, A);
++            origin = haveShallowLine ? float2(0.25f, 0.0f) : float2(0.5f, 0.0f);
++            direction.y -= haveShallowLine ? 1.0f : 0.0f;
++            direction.x -= haveSteepLine ? 1.0f : 0.0f;
++        }
++        float3 blendPix = lerp(F, B, step(XbrzDist(E, B), XbrzDist(E, F)));
++        res = lerp(res, blendPix, XbrzLeftRatio(pos, origin, direction, scale));
++    }
++    if (blendResult.x != XbrzBlendNone) {
++        float dist_D_C = XbrzDist(D, C);
++        float dist_B_G = XbrzDist(B, G);
++        bool doLineBlend = (blendResult.x == XbrzBlendDominant ||
++            !((blendResult.w != XbrzBlendNone && !XbrzPixEqual(E, C)) || (blendResult.y != XbrzBlendNone && !XbrzPixEqual(E, G)) ||
++              (XbrzPixEqual(C, B) && XbrzPixEqual(B, A) && XbrzPixEqual(A, D) && XbrzPixEqual(D, G) && !XbrzPixEqual(E, A))));
++        float2 origin = float2(0.0f, -1.0f / sqrt(2.0f));
++        float2 direction = float2(-1.0f, 1.0f);
++        if (doLineBlend) {
++            bool haveShallowLine = (XbrzSteepDirectionThreshold * dist_D_C <= dist_B_G) && XbrzNeq(E, C) && XbrzNeq(F, C);
++            bool haveSteepLine = (XbrzSteepDirectionThreshold * dist_B_G <= dist_D_C) && XbrzNeq(E, G) && XbrzNeq(H, G);
++            origin = haveShallowLine ? float2(0.0f, -0.25f) : float2(0.0f, -0.5f);
++            direction.x -= haveShallowLine ? 1.0f : 0.0f;
++            direction.y += haveSteepLine ? 1.0f : 0.0f;
++        }
++        float3 blendPix = lerp(D, B, step(XbrzDist(E, B), XbrzDist(E, D)));
++        res = lerp(res, blendPix, XbrzLeftRatio(pos, origin, direction, scale));
++    }
++    return res;
++}
++
++/*
++   HQ2x (libretro glsl-shaders hqx/shader-files/hq2x-halphon.glsl), ported to
++   HLSL.
++
++   MIT License
++
++   Copyright (c) 2015-2016 Lior Halphon
++
++   Permission is hereby granted, free of charge, to any person obtaining a copy
++   of this software and associated documentation files (the "Software"), to deal
++   in the Software without restriction, including without limitation the rights
++   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++   copies of the Software, and to permit persons to whom the Software is
++   furnished to do so, subject to the following conditions:
++
++   The above copyright notice and this permission notice shall be included in all
++   copies or substantial portions of the Software.
++
++   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++   SOFTWARE.
++*/
++float3 HqColorspace(float3 rgb) {
++    return float3(0.250f * rgb.r + 0.250f * rgb.g + 0.250f * rgb.b,
++                  0.250f * rgb.r - 0.000f * rgb.g - 0.250f * rgb.b,
++                  -0.125f * rgb.r + 0.250f * rgb.g - 0.125f * rgb.b);
++}
++
++bool HqDifferent(float3 a, float3 b) {
++    float3 diff = abs(HqColorspace(a) - HqColorspace(b));
++    return diff.x > 0.188f || diff.y > 0.027f || diff.z > 0.031f;
++}
++
++float3 HqInterp2(float3 c1, float w1, float3 c2, float w2) { return (c1 * w1 + c2 * w2) / (w1 + w2); }
++float3 HqInterp3(float3 c1, float w1, float3 c2, float w2, float3 c3, float w3) { return (c1 * w1 + c2 * w2 + c3 * w3) / (w1 + w2 + w3); }
++
++float3 FilterHq2x(float2 srcPos) {
++    float2 cell = floor(srcPos);
++    float2 p = srcPos - cell;
++    // Always the top left quarter; other quarters flip the neighbourhood.
++    float2 o = float2((p.x > 0.5f) ? -1.0f : 1.0f, (p.y > 0.5f) ? -1.0f : 1.0f);
++    float3 w0 = SourcePixel(cell, float2(-o.x, -o.y));
++    float3 w1 = SourcePixel(cell, float2(0.0f, -o.y));
++    float3 w2 = SourcePixel(cell, float2(o.x, -o.y));
++    float3 w3 = SourcePixel(cell, float2(-o.x, 0.0f));
++    float3 w4 = SourcePixel(cell, float2(0.0f, 0.0f));
++    float3 w5 = SourcePixel(cell, float2(o.x, 0.0f));
++    float3 w6 = SourcePixel(cell, float2(-o.x, o.y));
++    float3 w7 = SourcePixel(cell, float2(0.0f, o.y));
++    float3 w8 = SourcePixel(cell, float2(o.x, o.y));
++
++    uint pattern = 0;
++    if (HqDifferent(w0, w4)) pattern |= 1;
++    if (HqDifferent(w1, w4)) pattern |= 2;
++    if (HqDifferent(w2, w4)) pattern |= 4;
++    if (HqDifferent(w3, w4)) pattern |= 8;
++    if (HqDifferent(w5, w4)) pattern |= 16;
++    if (HqDifferent(w6, w4)) pattern |= 32;
++    if (HqDifferent(w7, w4)) pattern |= 64;
++    if (HqDifferent(w8, w4)) pattern |= 128;
++#define HQP(m, r) ((pattern & (m)) == (r))
++    if ((HQP(0xbf, 0x37) || HQP(0xdb, 0x13)) && HqDifferent(w1, w5))
++        return HqInterp2(w4, 3.0f, w3, 1.0f);
++    if ((HQP(0xdb, 0x49) || HQP(0xef, 0x6d)) && HqDifferent(w7, w3))
++        return HqInterp2(w4, 3.0f, w1, 1.0f);
++    if ((HQP(0x0b, 0x0b) || HQP(0xfe, 0x4a) || HQP(0xfe, 0x1a)) && HqDifferent(w3, w1))
++        return w4;
++    if ((HQP(0x6f, 0x2a) || HQP(0x5b, 0x0a) || HQP(0xbf, 0x3a) || HQP(0xdf, 0x5a) ||
++         HQP(0x9f, 0x8a) || HQP(0xcf, 0x8a) || HQP(0xef, 0x4e) || HQP(0x3f, 0x0e) ||
++         HQP(0xfb, 0x5a) || HQP(0xbb, 0x8a) || HQP(0x7f, 0x5a) || HQP(0xaf, 0x8a) ||
++         HQP(0xeb, 0x8a)) && HqDifferent(w3, w1))
++        return HqInterp2(w4, 3.0f, w0, 1.0f);
++    if (HQP(0x0b, 0x08))
++        return HqInterp3(w4, 2.0f, w0, 1.0f, w1, 1.0f);
++    if (HQP(0x0b, 0x02))
++        return HqInterp3(w4, 2.0f, w0, 1.0f, w3, 1.0f);
++    if (HQP(0x2f, 0x2f))
++        return HqInterp3(w4, 1.04f, w3, 1.0f, w1, 1.0f);
++    if (HQP(0xbf, 0x37) || HQP(0xdb, 0x13))
++        return HqInterp3(w4, 5.0f, w1, 2.0f, w3, 1.0f);
++    if (HQP(0xdb, 0x49) || HQP(0xef, 0x6d))
++        return HqInterp3(w4, 5.0f, w3, 2.0f, w1, 1.0f);
++    if (HQP(0x1b, 0x03) || HQP(0x4f, 0x43) || HQP(0x8b, 0x83) || HQP(0x6b, 0x43))
++        return HqInterp2(w4, 3.0f, w3, 1.0f);
++    if (HQP(0x4b, 0x09) || HQP(0x8b, 0x89) || HQP(0x1f, 0x19) || HQP(0x3b, 0x19))
++        return HqInterp2(w4, 3.0f, w1, 1.0f);
++    if (HQP(0x7e, 0x2a) || HQP(0xef, 0xab) || HQP(0xbf, 0x8f) || HQP(0x7e, 0x0e))
++        return HqInterp3(w4, 2.0f, w3, 3.0f, w1, 3.0f);
++    if (HQP(0xfb, 0x6a) || HQP(0x6f, 0x6e) || HQP(0x3f, 0x3e) || HQP(0xfb, 0xfa) ||
++        HQP(0xdf, 0xde) || HQP(0xdf, 0x1e))
++        return HqInterp2(w4, 3.0f, w0, 1.0f);
++    if (HQP(0x0a, 0x00) || HQP(0x4f, 0x4b) || HQP(0x9f, 0x1b) || HQP(0x2f, 0x0b) ||
++        HQP(0xbe, 0x0a) || HQP(0xee, 0x0a) || HQP(0x7e, 0x0a) || HQP(0xeb, 0x4b) ||
++        HQP(0x3b, 0x1b))
++        return HqInterp3(w4, 2.0f, w3, 1.0f, w1, 1.0f);
++#undef HQP
++    return HqInterp3(w4, 6.0f, w3, 1.0f, w1, 1.0f);
++}
++
++float4 ApplyScreenFilter(float2 uv, float2 screenPos) {
++    float2 srcPos = uv * gConstants.sourceResolution;
++    float3 color;
++    switch (gConstants.screenFilter) {
++    case 1: color = FilterCrt(srcPos, screenPos); break;
++    case 2: color = FilterScanlines(srcPos); break;
++    case 3: color = FilterLcd(srcPos); break;
++    case 4: color = FilterXbr(srcPos); break;
++    case 5: color = FilterXbrz(srcPos); break;
++    default: color = FilterHq2x(srcPos); break;
++    }
++
++    return float4(color, 1.0f);
++}
++
+ float4 PSMain(in float4 pos : SV_Position, in float2 uv : TEXCOORD0) : SV_TARGET {
++    if (gConstants.screenFilter != 0) {
++        return ApplyScreenFilter(uv, pos.xy);
++    }
++
+ #ifdef PIXEL_ANTIALIASING
+     return PixelAntialiasing(uv);
+ #else
+diff --git a/src/shared/rt64_video_interface.h b/src/shared/rt64_video_interface.h
+index 476d150..7f56ed3 100644
+--- a/src/shared/rt64_video_interface.h
++++ b/src/shared/rt64_video_interface.h
+@@ -17,6 +17,8 @@ namespace interop {
+         // game's 4:3 screen; the stretched sides outside it are multiplied by sideBrightness.
+         float centerFraction;
+         float sideBrightness;
++        uint screenFilter; // RT64::ScreenFilter (render/rt64_screen_filter.h)
++        float2 sourceResolution; // the frame buffer size in N64 pixels
+     };
+ #ifdef HLSL_CPU
+ };

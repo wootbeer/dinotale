@@ -48,6 +48,16 @@ function(dinotale_apply_lib_patches submodule)
     if (NOT result EQUAL 0)
         message(FATAL_ERROR "Couldn't reset lib/${submodule}:\n${error}")
     endif()
+    # Files the patches add aren't tracked, so the checkout above leaves them;
+    # remove them so the patch adding each one applies again.
+    foreach(patch IN LISTS patches)
+        file(READ "${patch}" patch_text)
+        string(REGEX MATCHALL "--- /dev/null\r?\n\\+\\+\\+ b/[^\r\n]+" added "${patch_text}")
+        foreach(entry IN LISTS added)
+            string(REGEX REPLACE "^--- /dev/null\r?\n\\+\\+\\+ b/" "" added_path "${entry}")
+            file(REMOVE "${dir}/${added_path}")
+        endforeach()
+    endforeach()
     foreach(patch IN LISTS patches)
         execute_process(
             COMMAND "${GIT_EXECUTABLE}" apply --ignore-whitespace "${patch}"

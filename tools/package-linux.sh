@@ -67,6 +67,7 @@ plutovg=lib/RecompFrontend/recompui/lib/lunasvg/plutovg/LICENSE
 GamepadMotionHelpers=lib/RecompFrontend/lib/GamepadMotionHelpers/LICENSE
 SlotMap=lib/RecompFrontend/lib/SlotMap/slot_map.h
 LZMA-SDK=thirdparty/lzma-sdk/lzma-sdk.txt
+screen-filters=licenses/screen-filters.txt
 EOF
 
 tar -C dist -czf "dist/$name.tar.gz" "$name"
