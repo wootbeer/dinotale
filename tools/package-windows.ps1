@@ -4,7 +4,7 @@
 # BUILDING.md (your ROM already copied in by tools\setup-windows.ps1 -Rom):
 #
 #   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-#   .\tools\package-windows.ps1 -Version 0.1.2
+#   .\tools\package-windows.ps1 -Version 0.1.3
 #
 # It builds through tools\setup-windows.ps1 (the same build you play), then
 # stages the exe, its DLLs, the assets folder, README, CHANGELOG, license and
@@ -12,7 +12,7 @@
 # dist\DinoTale-<version>-windows.zip. Nothing from the ROM other than the
 # recompiled code built into the exe is included.
 param(
-    [string]$Version = "0.1.2"
+    [string]$Version = "0.1.3"
 )
 
 $ErrorActionPreference = "Stop"

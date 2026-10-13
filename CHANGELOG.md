@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 - Expand: Yoshi walks smoothly to the edge of the wider screen instead of
   jumping out from the 4:3 edge, and can no longer walk off the left end of
