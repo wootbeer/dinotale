@@ -186,14 +186,63 @@ extern "C" int32_t dinotale_bg_row_columns(int32_t columns) {
     return (columns * width + original_view_width - 1) / original_view_width;
 }
 
-// How far from the camera's centre Yoshi may go before func_80023310 pushes
-// him back on screen: 144 for the 320-wide view (16 px inside its edge), as
-// float bits for $at, negative for the left side. In Expand it's the wider
-// view's half width less the same 16 px, so he can walk up to the visible
-// edge where the camera stops (camera walls, level ends).
-extern "C" uint32_t dinotale_screen_margin_bits(int32_t side) {
-    const float margin = float(active_view_width()) / 2.0f - 16.0f;
-    return float_bits((side < 0) ? -margin : margin);
+// Keeping Yoshi on screen. func_800233B4 checks his screen x (actor +0x34,
+// in the 320-wide view's pixels) less/plus half his width against 16 and
+// 304, and past either calls func_80023310, which puts him back at the
+// camera's centre -/+ 144 (divided by his scale, actor +0xB4): a wall 16 px
+// inside the screen's edge. In Expand both the check and the spot he's put
+// back at move out to 16 px inside the wider view's edge, so he walks up to
+// the visible edge where the camera stops (camera walls, level ends).
+//
+// Except on the left at a level's start: the camera sits with the 320-wide
+// view's left edge near the level's (world x 0), and the wider view reaches
+// past the level, where there's no ground. There the left limit stays where
+// it is on the N64, world x 16 (but never further in than 16 px).
+namespace {
+    // Extra screen pixels each side of the 320-wide view.
+    float extra_screen_width() {
+        return float(active_view_width() - original_view_width) / 2.0f;
+    }
+
+    // The left limit, in the 320-wide view's screen pixels (16 on the N64).
+    float left_screen_limit(uint8_t* rdram, uint32_t actor) {
+        const float extra = extra_screen_width();
+        if ((extra <= 0.0f) || ((actor & 0xFF800000) != 0x80000000)) {
+            return 16.0f;
+        }
+        const uint32_t camera = *reinterpret_cast<uint32_t*>(rdram + (0x800F8318 - 0x80000000));
+        if ((camera & 0xFF800000) != 0x80000000) {
+            return 16.0f - extra;
+        }
+        const float centre = *reinterpret_cast<float*>(rdram + (camera + 0x30 - 0x80000000));
+        const float scale = *reinterpret_cast<float*>(rdram + (actor + 0xB4 - 0x80000000));
+        if (!std::isfinite(centre) || !std::isfinite(scale) || (scale <= 0.0f)) {
+            return 16.0f - extra;
+        }
+        const float level_start = (16.0f - centre) * scale + float(original_view_width) / 2.0f;
+        return std::min(16.0f, std::max(16.0f - extra, level_start));
+    }
+}
+
+// func_800233B4's left check, `(x - half width) < 16`, with that value in
+// $t7 / $t1: shift it so the check tests the left limit instead.
+extern "C" int32_t dinotale_screen_left_test(uint8_t* rdram, uint32_t actor, int32_t value) {
+    return value + int32_t(16.0f - std::floor(left_screen_limit(rdram, actor)));
+}
+
+// func_800233B4's right check, `(x + half width) < 304`, value in $t3 / $t0.
+extern "C" int32_t dinotale_screen_right_test(int32_t value) {
+    return value - int32_t(extra_screen_width());
+}
+
+// The distance from the camera's centre func_80023310 puts Yoshi back at
+// (before dividing by his scale), as float bits for $at, negative on the left.
+extern "C" uint32_t dinotale_screen_margin_bits(uint8_t* rdram, uint32_t actor, int32_t side) {
+    if (side < 0) {
+        const float limit = std::floor(left_screen_limit(rdram, actor));
+        return float_bits(limit - float(original_view_width) / 2.0f);
+    }
+    return float_bits(float(original_view_width) / 2.0f - 16.0f + extra_screen_width());
 }
 
 // Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background

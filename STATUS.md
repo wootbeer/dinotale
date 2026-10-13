@@ -6,6 +6,25 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 37: Yoshi jumping at the 4:3 edge in Expand (issue #8)
+
+**Report:** in widescreen, walking towards the edge of the screen, Yoshi
+"breaks at the 4:3 mark and appears instantly on the edge of the screen".
+
+**Cause:** func_800233B4 keeps Yoshi on screen: when his screen x less/plus
+half his width passes 16 or 304 (the 320-wide screen's edges less 16 px), it
+calls func_80023310, which puts him back at the camera's centre -/+ 144.
+Round 32 (issue #4) moved that spot out to the wider view's edge but not the
+check, so crossing the 4:3 edge teleported him 56 px outwards. At a level's
+start, where the wider view reaches past the left end of the level, that
+dropped him off the level and he lost a life (reproduced at 1-1's start).
+
+**Fix:** the checks (hooks in func_800233B4) and the spot move out together to
+16 px inside the wider view, so he walks smoothly to the visible edge. On the
+left the limit is never past world x 16, where the N64 stops him at a level's
+start (the camera's 320-wide view starts there, the level art at x 0). 1-1:
+walking left from the start, he now stops at the edge of the ground.
+
 ## Round 36: stale background blocks in 4-1 (issue #7)
 
 **Report:** many graphical glitches in 4-1, in Original and widescreen:

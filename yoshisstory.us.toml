@@ -206,17 +206,42 @@ func = "func_8004FB98"
 before_vram = 0x8004FBF4
 text = "ctx->r9 = dinotale_bg_row_columns(ctx->r9);"
 
-# Expand: func_80023310 keeps Yoshi on screen, pushing him back once he's
-# past the camera centre -/+ 144 (16 px inside a 320-wide view). Use the
-# wider view's half width instead, or Yoshi meets an invisible wall 56 px
-# before the visible edge where the camera stops (at camera walls, level
-# ends). The constants are loaded into $at by `lui` at 0x80023368 / 0x80023380.
+# Expand: keeping Yoshi on screen. func_800233B4 checks his screen x against
+# 16 and 304 (the 320-wide screen less 16 px) and past either calls
+# func_80023310, which puts him back at the camera's centre -/+ 144. Move
+# both out to the wider view's edges, or he jumps from the 4:3 edge to the
+# wider one (and at a level's start off the level); at a level's start the
+# left limit stays at the level's edge. See src/game/widescreen.cpp.
+# The checks: `slti $at, <reg>, 0x130 / 0x10` at 0x800234DC ($t3),
+# 0x80023534 ($t7), 0x8002358C ($t0) and 0x80023598 ($t1); actor in $a0.
+[[patches.hook]]
+func = "func_800233B4"
+before_vram = 0x800234DC
+text = "ctx->r11 = (gpr)dinotale_screen_right_test((int32_t)ctx->r11);"
+
+[[patches.hook]]
+func = "func_800233B4"
+before_vram = 0x80023534
+text = "ctx->r15 = (gpr)dinotale_screen_left_test(rdram, (uint32_t)ctx->r4, (int32_t)ctx->r15);"
+
+[[patches.hook]]
+func = "func_800233B4"
+before_vram = 0x8002358C
+text = "ctx->r8 = (gpr)dinotale_screen_right_test((int32_t)ctx->r8);"
+
+[[patches.hook]]
+func = "func_800233B4"
+before_vram = 0x80023598
+text = "ctx->r9 = (gpr)dinotale_screen_left_test(rdram, (uint32_t)ctx->r4, (int32_t)ctx->r9);"
+
+# The spot func_80023310 puts him back at: the constants are loaded into $at
+# by `lui` at 0x80023368 / 0x80023380 (actor in $a0).
 [[patches.hook]]
 func = "func_80023310"
 before_vram = 0x8002336C
-text = "ctx->r1 = dinotale_screen_margin_bits(-1);"
+text = "ctx->r1 = dinotale_screen_margin_bits(rdram, (uint32_t)ctx->r4, -1);"
 
 [[patches.hook]]
 func = "func_80023310"
 before_vram = 0x80023384
-text = "ctx->r1 = dinotale_screen_margin_bits(1);"
+text = "ctx->r1 = dinotale_screen_margin_bits(rdram, (uint32_t)ctx->r4, 1);"

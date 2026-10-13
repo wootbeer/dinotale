@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Expand: Yoshi walks smoothly to the edge of the wider screen instead of
+  jumping out from the 4:3 edge, and can no longer walk off the left end of
+  a level at its start.
+
 ## 0.1.2
 
 - Fixed blocks of wrong background tiles in 4-1 (and anywhere the game
