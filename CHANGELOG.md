@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- Fixed lines through rotated sprites (3-3's tilting platforms, 4-3's balls,
+  6-1's cogwheels).
+
 ## 0.1.3
 
 - Expand: Yoshi walks smoothly to the edge of the wider screen instead of

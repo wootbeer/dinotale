@@ -2,7 +2,7 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 index bbd3702..09ed6a8 100644
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -787,32 +787,96 @@ namespace RT64 {
+@@ -787,32 +787,97 @@ namespace RT64 {
              drawObjRect(state, o, x0, y0, x1, y1);
          }
  
@@ -101,10 +101,11 @@ index bbd3702..09ed6a8 100644
 +                maxY = (i == 0) ? y : std::max(maxY, y);
 +            }
 +
-+            const int32_t ulx = int32_t(std::floor(minX * 4.0f));
-+            const int32_t uly = int32_t(std::floor(minY * 4.0f));
-+            const int32_t lrx = int32_t(std::ceil(maxX * 4.0f));
-+            const int32_t lry = int32_t(std::ceil(maxY * 4.0f));
++            // On whole pixels: the renderer rounds a rectangle's edges to them (FixedRect::left(true) etc.).
++            const int32_t ulx = int32_t(std::floor(minX)) * 4;
++            const int32_t uly = int32_t(std::floor(minY)) * 4;
++            const int32_t lrx = int32_t(std::ceil(maxX)) * 4;
++            const int32_t lry = int32_t(std::ceil(maxY)) * 4;
 +            if ((lrx <= ulx) || (lry <= uly)) {
 +                return;
 +            }
@@ -138,11 +139,11 @@ index 603b622..4bd0591 100644
 +            quadOverride.active = false;
 +
 +            // The rectangle's vertices are its corners in the order TL, TR, BL, BR, TR, BL, with x and y from -1
-+            // to 1 across it (y up).
-+            const float left = drawRect.ulx / 4.0f;
-+            const float top = drawRect.uly / 4.0f;
-+            const float width = std::max(drawRect.lrx - drawRect.ulx, 1) / 4.0f;
-+            const float height = std::max(drawRect.lry - drawRect.uly, 1) / 4.0f;
++            // to 1 across it (y up), as the renderer places it: with its edges rounded up to whole pixels.
++            const float left = float(drawRect.left(true));
++            const float top = float(drawRect.top(true));
++            const float width = float(std::max(drawRect.right(true) - drawRect.left(true), 1));
++            const float height = float(std::max(drawRect.bottom(true) - drawRect.top(true), 1));
 +            static const int corners[6] = { 0, 1, 2, 3, 1, 2 };
 +            float *pos = triPosFloats.data() + triPosFloats.size() - 6 * 4;
 +            float *tc = triTcFloats.data() + triTcFloats.size() - 6 * 2;

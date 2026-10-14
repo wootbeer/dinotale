@@ -6,6 +6,29 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 38: lines through rotated sprites (issues #12, #13, #14)
+
+**Report:** thin lines through the tilting platforms in 3-3, the balls in
+4-3 and the cogwheels in 6-1: all sprites the game rotates (G_OBJ_SPRITE
+with a rotation in its 2D matrix, drawn by `rt64/0014`). Flat sprites of the
+same objects next to them are fine.
+
+**Cause:** `rt64/0014` draws a rotated sprite through RT64's rectangle path,
+over its bounding box, with the box's four corners moved to where the matrix
+puts them, as positions from -1 to 1 across the box. The box was on quarter
+pixels, but the renderer places a rectangle with its edges rounded up to
+whole pixels (`FixedRect::left(true)` etc.), so each rotated sprite was
+stretched and moved by up to a pixel (several screen pixels at high
+resolutions), by a different amount for each piece. The game draws large
+sprites in TMEM-sized strips, so the joins between a sprite's strips opened
+into lines. The lines don't pass through the sprites' centres, so it isn't
+the diagonal between a quad's two triangles.
+
+**Fix:** the bounding box is on whole pixels, and the corners are placed
+against the box as the renderer rounds it. Not reproducible here (lavapipe,
+and the tested rotated sprite, 1-4's block, is a single strip); 1-4's block
+still rotates correctly.
+
 ## Round 37: Yoshi jumping at the 4:3 edge in Expand (issue #8)
 
 **Report:** in widescreen, walking towards the edge of the screen, Yoshi
