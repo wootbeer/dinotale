@@ -1,0 +1,20 @@
+diff --git a/src/hle/rt64_workload_queue.cpp b/src/hle/rt64_workload_queue.cpp
+index 5a331aa..b79c0a4 100644
+--- a/src/hle/rt64_workload_queue.cpp
++++ b/src/hle/rt64_workload_queue.cpp
+@@ -137,7 +137,14 @@ namespace RT64 {
+         switch (ratioMode) {
+         case UserConfiguration::AspectRatio::Expand:
+             if ((ext.sharedResources->swapChainWidth > 0) && (ext.sharedResources->swapChainHeight > 0)) {
+-                const float derivedRatioTarget = float(ext.sharedResources->swapChainWidth) / float(ext.sharedResources->swapChainHeight);
++                float derivedRatioTarget = float(ext.sharedResources->swapChainWidth) / float(ext.sharedResources->swapChainHeight);
++
++                // DinoTale: the game's widened view (extendScreen) stops at 16:9. A wider window shows it at 16:9 with
++                // black bars, instead of leaving the sides past it undrawn (stale pixels from earlier frames).
++                if (ext.sharedResources->userConfig.extendScreen) {
++                    derivedRatioTarget = std::min(derivedRatioTarget, 16.0f / 9.0f);
++                }
++
+                 workloadConfig.aspectRatioTarget = std::max(derivedRatioTarget, workloadConfig.aspectRatioSource);
+             }
+             else {

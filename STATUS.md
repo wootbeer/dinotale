@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 39: smearing past 16:9 in Expand (issue #15)
+
+**Report:** in widescreen the outer left and right edges of the screen
+smear and flicker ("hall of mirrors") all the time. The screenshots are from
+windows wider than 16:9 (2000x1055, 1365x720).
+
+**Cause:** Expand widens the game's view up to 16:9, but RT64's Expand used
+the window's full aspect ratio, so in a wider window the strips past 16:9
+were part of the picture with nothing drawn in them: whatever an earlier
+frame left there stayed (black here on lavapipe, which starts from cleared
+memory).
+
+**Fix** (`rt64/0020`): with the game's view widened (`extendScreen`), RT64's
+target aspect ratio stops at 16:9, so a wider window shows the 16:9 picture
+with black bars. Hybrid, which stretches backgrounds to the window, is
+unchanged. Checked in a 1500x700 window.
+
 ## Round 38: lines through rotated sprites (issues #12, #13, #14)
 
 **Report:** thin lines through the tilting platforms in 3-3, the balls in
