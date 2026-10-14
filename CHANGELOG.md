@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4
 
 - Windows: larger thread stacks, for random crashes in NVIDIA's graphics
   driver (`nvwgf2umx.dll`).
