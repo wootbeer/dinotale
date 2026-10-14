@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Windows: larger thread stacks, for random crashes in NVIDIA's graphics
+  driver (`nvwgf2umx.dll`).
 - Expand in a window wider than 16:9: black bars at the sides instead of
   smeared, flickering edges.
 - Fixed lines through rotated sprites (3-3's tilting platforms, 4-3's balls,

@@ -6,6 +6,25 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 40: Windows crashes in the NVIDIA driver (issues #6, #17)
+
+**Reports:** random crashes in 4-1 and 4-4 (four in one session in 4-4),
+jumping or standing still. Every crash log is the same: access violation at
+offset 0x7482ee in `nvwgf2umx.dll` (NVIDIA's graphics driver), on the Gfx
+Thread, writing an address 0x20 below a 1 MB-aligned one (`...d7fffe0`,
+`...a29fffe0`).
+
+**Cause (most likely):** the Gfx Thread running out of stack inside the
+driver. MSVC gives every thread created without an explicit size (all
+`std::thread`s: the Gfx Thread, RT64's workers, the game's threads) a 1 MB
+stack, and the driver compiles shaders on the thread that asks for them;
+NVIDIA's compiler is known to need more than that. A write just below a
+1 MB boundary is where a 1 MB stack ends. Linux threads get 8 MB, and no
+crash like this has been reported there. Not reproducible here.
+
+**Fix:** link with `/STACK:8388608`: 8 MB stacks, as on Linux. Only reserved;
+memory is committed as a stack actually grows.
+
 ## Round 39: smearing past 16:9 in Expand (issue #15)
 
 **Report:** in widescreen the outer left and right edges of the screen

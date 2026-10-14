@@ -221,6 +221,12 @@ if (MSVC)
     # A map of the exe's functions, kept in the build folder (not shipped), so a
     # crash log's "Fault offset" can be looked up in it.
     target_link_options(DinoTale PRIVATE "/MAP:${CMAKE_BINARY_DIR}/DinoTale.map")
+    # 8 MB stacks (only reserved, committed as used) for every thread created
+    # without an explicit size, as on Linux; the default is 1 MB. The graphics
+    # driver compiles shaders on the thread that asks for them (the Gfx Thread),
+    # and NVIDIA's compiler can need more than 1 MB: issues #6 and #17 crashed
+    # in nvwgf2umx.dll writing just below a 1 MB-aligned address.
+    target_link_options(DinoTale PRIVATE /STACK:8388608)
 elseif (APPLE)
     # Use a wrapper around ld64 that respects segprot's `max_prot` value in order
     # to make our executable memory writable (required for mod function patching)
