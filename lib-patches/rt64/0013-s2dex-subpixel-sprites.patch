@@ -13,15 +13,15 @@ index c35c698..bbd3702 100644
 -
 -            const int32_t ulx = int32_t(std::lround(x0 * 4.0f));
 -            const int32_t uly = int32_t(std::lround(y0 * 4.0f));
-+            // Start the rectangle on a whole pixel and move the texture by the part of a pixel that cut off,
-+            // so the texture lands exactly where the sprite's sub-pixel position puts it. Snapping each
-+            // rectangle's start to a quarter pixel with the texture starting at its first texel put
-+            // neighbouring strips of one image (text boxes, drawn as overlapping strips) a fraction of a
-+            // pixel apart, by an amount that changed as the text scrolled, so the joins shimmered.
-+            // (Only with clamped texture coordinates: the part before the first texel then repeats that texel.)
++            // Start the rectangle on a whole pixel and move the texture by the part of a pixel that differs,
++            // so the texture lands exactly where the sprite's sub-pixel position puts it (snapping only the
++            // start to a quarter pixel put the strips of one image a shimmering fraction of a pixel apart).
++            // Round up, as the renderer rounds a rectangle's far edges (FixedRect::right(true)): a strip then
++            // starts on the pixel the previous one ended at, without drawing its last row again (blended twice
++            // in a translucent image: a line through the clouds). Wrapping textures keep their exact start.
 +            const bool clamped = (objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0;
-+            const float startX = clamped ? std::floor(x0) : x0;
-+            const float startY = clamped ? std::floor(y0) : y0;
++            const float startX = clamped ? float((int32_t(std::lround(x0 * 4.0f)) + 3) >> 2) : x0;
++            const float startY = clamped ? float((int32_t(std::lround(y0 * 4.0f)) + 3) >> 2) : y0;
 +            const float leadS = (x0 - startX) * stepS;
 +            const float leadT = (y0 - startY) * stepT;
 +            int16_t uls = int16_t(std::lround((shrink - leadS) * 32.0f));

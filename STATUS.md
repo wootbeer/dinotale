@@ -6,6 +6,23 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 42: lines through the castle screen's clouds (issue #22)
+
+**Report:** on the continue / game over screen (the castle), the clouds have
+a single line across them.
+
+**Cause:** each cloud is a translucent 128x64 image drawn in strips (32, 32
+and 2 rows) by G_OBJ_SPRITE with a scale. `rt64/0013` starts each strip's
+rectangle on a whole pixel, rounding its start down, but the renderer rounds
+a rectangle's far edge up (`FixedRect::right(true)`), so where a strip ended
+on a fraction of a pixel the next one started on the same pixel and drew that
+row again. In an opaque image that's invisible; in a translucent one the row
+is blended twice, a line.
+
+**Fix:** round each strip's start up instead, the way the renderer rounds the
+previous strip's end, still moving the texture by the difference so the image
+lands at its exact position. The castle screen's clouds: no lines.
+
 ## Round 41: things vanishing at the 4:3 edge in Expand (issues #19, #20)
 
 **Reports:** in 5-4, Shy Guys on stilts have no stilts until they're inside
