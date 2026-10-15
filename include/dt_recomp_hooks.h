@@ -32,6 +32,7 @@ int32_t dinotale_bg_row_columns(int32_t columns);
 uint32_t dinotale_screen_margin_bits(uint8_t* rdram, uint32_t actor, int32_t side);
 int32_t dinotale_screen_left_test(uint8_t* rdram, uint32_t actor, int32_t value);
 int32_t dinotale_screen_right_test(int32_t value);
+int32_t dinotale_actor_screen_x(int32_t x);
 void dinotale_bg_view_freed(uint8_t* rdram, uint32_t layer);
 
 #endif // DT_RECOMP_HOOKS_H

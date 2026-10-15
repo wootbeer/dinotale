@@ -245,3 +245,24 @@ text = "ctx->r1 = dinotale_screen_margin_bits(rdram, (uint32_t)ctx->r4, -1);"
 func = "func_80023310"
 before_vram = 0x80023384
 text = "ctx->r1 = dinotale_screen_margin_bits(rdram, (uint32_t)ctx->r4, 1);"
+
+# Expand: actors' on-screen tests against the 320-wide screen. Each loads the
+# actor's screen x (+0x34) and compares it with bounds at or past the screen's
+# edges; pass it through dinotale_actor_screen_x so the bounds follow the
+# wider view's edges. See src/game/widescreen.cpp.
+# func_800591EC(x, y, margin_x, margin_y): the shared test, 1 if
+# -margin_x < x < 320 + margin_x (the camera's width, +0x9C) and likewise for
+# y; called with an actor's screen x from the "is it on screen" helpers
+# (func_80059278, func_800592AC) and others. Bob-ombs and others despawn
+# when it fails.
+[[patches.hook]]
+func = "func_800591EC"
+before_vram = 0x800591EC
+text = "ctx->r4 = (gpr)dinotale_actor_screen_x((int32_t)ctx->r4);"
+
+# ovl_096 (5-4's Shy Guys on stilts): the stilts are drawn only while
+# 0 <= x < 320 (`bltz $v0` / `slti $at, $v0, 0x140`).
+[[patches.hook]]
+func = "func_805175E4"
+before_vram = 0x80517630
+text = "ctx->r2 = (gpr)dinotale_actor_screen_x((int32_t)ctx->r2);"

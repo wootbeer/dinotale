@@ -6,6 +6,28 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 41: things vanishing at the 4:3 edge in Expand (issues #19, #20)
+
+**Reports:** in 5-4, Shy Guys on stilts have no stilts until they're inside
+the 4:3 part of the screen, and the bob-ombs fired from the ship vanish at
+the 4:3 edge (they vanish off screen on the N64 too, but at its edge).
+
+**Cause:** the game decides what's on screen from each actor's screen x
+(actor +0x34, in the 320-wide view's pixels). The shared test,
+`func_800591EC(x, y, margin_x, margin_y)`, passes when -margin < x < 320 +
+margin (the camera's width, +0x9C); the draw cull (`func_8005F700`, called
+with margins from 0 up), the "is it on screen" helpers and others use it.
+In Expand the extra strips are outside 0..320, so anything there with a
+small margin wasn't drawn or was removed. The stilts are drawn by
+`func_805175E4` (ovl_096) only while 0 <= x < 320.
+
+**Fix:** `dinotale_actor_screen_x` gives such a test the x it would see if
+the screen were the wider view: unchanged inside 0..319, the nearest edge
+column inside the extra strips, moved in by the strips' width past them, so
+bounds at or past the screen's edges follow the wider view's edges. Hooked
+at the entry of `func_800591EC` and before the stilts' test. Checked that
+the shared test runs every frame in 5-4.
+
 ## Round 40: Windows crashes in the NVIDIA driver (issues #6, #17)
 
 **Reports:** random crashes in 4-1 and 4-4 (four in one session in 4-4),

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Expand: things no longer vanish at the edge of the 4:3 area: enemies like
+  5-4's bob-ombs stay until they leave the wider screen, and the stilt Shy
+  Guys' stilts show across it.
+
 ## 0.1.4
 
 - Windows: larger thread stacks, for random crashes in NVIDIA's graphics

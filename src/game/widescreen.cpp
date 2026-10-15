@@ -245,6 +245,28 @@ extern "C" uint32_t dinotale_screen_margin_bits(uint8_t* rdram, uint32_t actor, 
     return float_bits(float(original_view_width) / 2.0f - 16.0f + extra_screen_width());
 }
 
+// Many actors test their screen x (actor +0x34, in the 320-wide view's pixels)
+// against bounds at or past the screen's edges to decide whether they're on
+// screen: whether to draw extra parts, start a timer, despawn. In Expand the
+// visible screen is wider, so give such a test the x it would see if the
+// screen were: inside the 320-wide view unchanged, in the extra strips the
+// nearest on-screen column (0 or 319), past them moved in by the strips'
+// width. A test against bounds outside 0..319 then shifts with the wider
+// view's edges. Only for loads used just for such a test.
+extern "C" int32_t dinotale_actor_screen_x(int32_t x) {
+    const int32_t extra = int32_t(extra_screen_width());
+    if (extra <= 0) {
+        return x;
+    }
+    if (x < 0) {
+        return std::min(0, x + extra);
+    }
+    if (x >= original_view_width) {
+        return std::max(original_view_width - 1, x - extra);
+    }
+    return x;
+}
+
 // Our RT64 patch (rt64_gbi_s2dex.cpp): columns at the left of a background
 // image to cover with black when it's drawn.
 extern "C" void rt64_dinotale_set_bg_left_mask(uint32_t address, int32_t columns);
