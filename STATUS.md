@@ -41,7 +41,8 @@ sprites use): neighbouring strips share their edge, so no lines, and the
 image moves with its edges. Backgrounds and other sprites are as before.
 The hill wiggle (#16) stays open.
 
-| whole texels | all on whole pixels, width kept, strip edges fitted | ? | ? | ? |
+| whole texels, rounded | all on whole pixels, rounded, width kept | mostly ok | fence less, fruit wiggles (more moving left) | perfect |
+| whole texels, rounded down | all on whole pixels, rounded up (RDP), width kept | ? | ? | ? |
 
 The camera was ruled out: logged per frame in Original aspect it eases to a
 stop smoothly, and the hill wiggles with or without the widened camera-wall
@@ -49,6 +50,12 @@ probe (temporary `DINOTALE_NARROW_CAMERA` switch, now removed). So back to
 the switch's combination (whole-texel backgrounds, every sprite on whole
 pixels), without its two faults: sprites keep their width (and, unless
 they're strips, their height), and strips share their rounded edges.
+Rounding both to the nearest pixel let a sprite and the scenery it stands in
+land a pixel apart at half-pixel positions, depending on direction (worse
+moving left). The N64 rounds a background's scroll down (point sampling) and
+a rectangle's start up (the RDP starts on the first pixel at or after it):
+for an object at a whole-pixel place in the world those agree. Both now
+round the N64's way.
 
 **Picket fence:** it's one 64x32 sprite at scale 1.003 with the strip flag
 (render mode 0x18), so it took the strip path, where rounding both edges made
