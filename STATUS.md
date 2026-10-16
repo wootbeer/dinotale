@@ -41,6 +41,12 @@ sprites use): neighbouring strips share their edge, so no lines, and the
 image moves with its edges. Backgrounds and other sprites are as before.
 The hill wiggle (#16) stays open.
 
+**Picket fence:** it's one 64x32 sprite at scale 1.003 with the strip flag
+(render mode 0x18), so it took the strip path, where rounding both edges made
+it 64 or 65 pixels wide by turns. Horizontally the width is now rounded once
+(start rounded, size kept); vertically both edges are rounded, which is where
+strips meet. Frame-by-frame captures at 3x: the pickets keep their shape.
+
 ## Round 42: lines through the castle screen's clouds (issue #22)
 
 **Report:** on the continue / game over screen (the castle), the clouds have

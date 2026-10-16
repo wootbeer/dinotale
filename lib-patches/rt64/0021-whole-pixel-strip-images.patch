@@ -1,7 +1,7 @@
 diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -744,6 +744,58 @@
+@@ -744,6 +744,61 @@
                  y1 -= insetY;
              }
  
@@ -13,9 +13,12 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +            // whole pixels their width changed by a pixel now and then, and they wobbled.
 +            const bool largeStripImage = (shrink > 0.0f) && (o.imageW >= 64.0f);
 +            if (largeStripImage && ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0)) {
++                // Horizontally the width is rounded once, so the sprite keeps its size as it moves sideways (rounding
++                // both edges made a 64.2-pixel fence 64 or 65 pixels wide by turns, and its pickets wobbled).
++                // Vertically both edges are rounded: that's where strips of one image meet.
 +                const float qx0 = std::round(x0);
++                const float qx1 = qx0 + std::round(x1 - x0);
 +                const float qy0 = std::round(y0);
-+                const float qx1 = std::round(x1);
 +                const float qy1 = std::round(y1);
 +                if ((qx1 <= qx0) || (qy1 <= qy0)) {
 +                    return;
