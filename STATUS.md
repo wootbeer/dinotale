@@ -18,22 +18,24 @@ layers on whole native pixels. Backgrounds: the hills' wiggle went away.
 Sprites: the clouds' edges stopped wiggling but the lines through clouds and
 message boxes got bigger.
 
-**Backgrounds:** scrolling them in whole texels was tried and dropped: it
-didn't help the hills (whose edges turned out to come from sprites) and made
-the picket fence wiggle much more.
+**Backgrounds:** a layer scrolled by a fraction of a texel moves smoothly at
+high resolutions, but it's drawn in strips loaded separately, and parts of
+its edges (1-1's tall hills) stepped back and forth as the camera settled.
+`bg1Cyc` scrolls the image in whole texels, as the N64's point-sampled RDP
+shows it. (Dropping this for a test brought the hills' wiggle back.)
 
 **Sprites:** `rt64/0013` placed the texture at the sprite's exact position
-inside a rectangle whose edges are rounded to whole pixels, so edges stepped
-while the image moved smoothly. A first try drew sprites as quads at their
-exact sub-pixel corners: the hills still wiggled (their edges come from
-sprites too; the switch had fixed them by rounding sprites) and the picket
-fence wiggled much more. Now a sprite with a clamped texture is drawn on whole
-pixels, both edges of its rectangle rounded and the image fitted exactly
-between them (a quad, the path rotated sprites use): it moves in whole pixels
-with its image, as on the N64, and neighbouring strips of one image share
-their rounded edge, so no lines. (The switch rounded only a strip's start,
-which is why its lines got bigger.) Wrapping (tiled) textures keep the plain
-rectangle.
+inside a rectangle whose edges are rounded to whole pixels: edges stepped
+while the image moved smoothly, and the strips of one image met a fraction of
+a pixel apart or overlapped (the line in message boxes). Images drawn in
+strips trim their edges (`G_OBJRM_SHRINKSIZE`); those are now drawn on whole
+pixels, both edges rounded and the image fitted exactly between them (a quad,
+the path rotated sprites use): neighbouring strips share their rounded edge
+and the image moves with its edges. Message boxes: no line at all; castle
+clouds: no lines, edges move in whole steps. Rounding every sprite was tried:
+groups of small sprites (1-1's picket fence) jittered against each other, so
+other sprites keep the sub-pixel placement. Exact sub-pixel quads were tried
+too and made the fence worse.
 
 ## Round 42: lines through the castle screen's clouds (issue #22)
 

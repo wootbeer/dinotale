@@ -1,0 +1,75 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -323,6 +323,13 @@
+             }
+ 
+             int16_t imageY0 = scaleBg.imageY + (pixY0 * scaleH >> 7);
++
++            // DinoTale: scroll the image in whole texels, as the N64's point-sampled RDP shows it. At higher
++            // resolutions a fraction of a texel moves the image smoothly, but the layer is drawn in strips loaded
++            // separately, and parts of its edges (1-1's tall hills) stepped back and forth as the camera settled
++            // (issue #16).
++            imageX0 = int16_t((imageX0 + 16) & ~0x1F);
++            imageY0 = int16_t((imageY0 + 16) & ~0x1F);
+             int32_t imageYorig = scaleBg.imageYorig;
+ 
+             // Keep scrolling down the image one row at a time if the 
+@@ -744,6 +751,57 @@
+                 y1 -= insetY;
+             }
+ 
++            // Images drawn in strips trim their edges (G_OBJRM_SHRINKSIZE). Draw those on whole pixels, both edges of
++            // the rectangle rounded and the image fitted exactly between them, as a quad (the path rotated sprites
++            // use, see doObjSprite): neighbouring strips share their rounded edge, so text boxes and clouds show no
++            // lines at the joins, and the image moves in whole pixels with its edges instead of sliding inside
++            // them (wiggling edges, issue #16). Other sprites keep the sub-pixel placement below: rounding each one
++            // separately made groups of small sprites (1-1's picket fence) jitter against each other.
++            if ((shrink > 0.0f) && ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0)) {
++                const float qx0 = std::round(x0);
++                const float qy0 = std::round(y0);
++                const float qx1 = std::round(x1);
++                const float qy1 = std::round(y1);
++                if ((qx1 <= qx0) || (qy1 <= qy0)) {
++                    return;
++                }
++
++                float s0 = shrink, s1 = o.imageW - shrink;
++                float t0 = shrink, t1 = o.imageH - shrink;
++                if (flipS) {
++                    std::swap(s0, s1);
++                }
++
++                if (flipT) {
++                    std::swap(t0, t1);
++                }
++
++                RDP::QuadOverride &quad = rdp->quadOverride;
++                const float xs[4] = { qx0, qx1, qx0, qx1 };
++                const float ys[4] = { qy0, qy0, qy1, qy1 };
++                const float ss[4] = { s0, s1, s0, s1 };
++                const float ts[4] = { t0, t0, t1, t1 };
++                for (int i = 0; i < 4; i++) {
++                    quad.pos[i][0] = xs[i];
++                    quad.pos[i][1] = ys[i];
++                    quad.tc[i][0] = ss[i];
++                    quad.tc[i][1] = ts[i];
++                }
++
++                const int32_t qulx = int32_t(qx0) * 4;
++                const int32_t quly = int32_t(qy0) * 4;
++                const int32_t qlrx = int32_t(qx1) * 4;
++                const int32_t qlry = int32_t(qy1) * 4;
++
++                // The rectangle's own texture coordinates only bound the texels it samples: the whole image.
++                const int16_t rectDsdx = int16_t(std::lround(o.imageW * 4096.0f / float(qlrx - qulx)));
++                const int16_t rectDtdy = int16_t(std::lround(o.imageH * 4096.0f / float(qlry - quly)));
++                quad.active = true;
++                rdp->drawTexRect(qulx, quly, qlrx, qlry, G_TX_RENDERTILE, 0, 0, rectDsdx, rectDtdy, false);
++                quad.active = false;
++                return;
++            }
++
+             // Start the rectangle on a whole pixel and move the texture by the part of a pixel that differs,
+             // so the texture lands exactly where the sprite's sub-pixel position puts it (snapping only the
+             // start to a quarter pixel put the strips of one image a shimmering fraction of a pixel apart).
