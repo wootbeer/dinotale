@@ -42,7 +42,13 @@ image moves with its edges. Backgrounds and other sprites are as before.
 The hill wiggle (#16) stays open.
 
 | whole texels, rounded | all on whole pixels, rounded, width kept | mostly ok | fence less, fruit wiggles (more moving left) | perfect |
-| whole texels, rounded down | all on whole pixels, rounded up (RDP), width kept | ? | ? | ? |
+| whole texels, rounded down | all on whole pixels, rounded up (RDP), width kept | mostly ok | fence, fruit wiggle | perfect |
+
+**Kept:** the fence fix version (large strip images on whole pixels with their
+width kept; backgrounds and other sprites as before): fence and fruit calm,
+message boxes and clouds perfect. The hill edge's wiggle stays (#16); with
+everything on whole pixels it's mostly gone but sprites near Yoshi wiggle,
+which is more noticeable. It may partly be the game's own layer separation.
 
 The camera was ruled out: logged per frame in Original aspect it eases to a
 stop smoothly, and the hill wiggles with or without the widened camera-wall
