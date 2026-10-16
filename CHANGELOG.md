@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5
 
 - Message boxes and clouds (images drawn in strips) have no lines at the
   joins, and their edges no longer wiggle as they move.
