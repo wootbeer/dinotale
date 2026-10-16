@@ -6,6 +6,32 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 43: wiggling edges, lines through strips (issue #16, #22)
+
+**Report:** after Yoshi stops, the left edges of 1-1's tall hills wiggle for a
+moment before settling; the castle screen's clouds wiggle at their left edge
+as they drift; a line shows in message boxes as the text scrolls. At every
+resolution and framerate; not in emulators.
+
+**Test:** a temporary switch (`DINOTALE_SNAP`) placed sprites and background
+layers on whole native pixels. Backgrounds: the hills' wiggle went away.
+Sprites: the clouds' edges stopped wiggling but the lines through clouds and
+message boxes got bigger.
+
+**Backgrounds:** a layer scrolled by a fraction of a texel moves smoothly at
+high resolutions, but it's drawn in strips loaded separately and parts of its
+edges stepped back and forth as the camera settled. `bg1Cyc` now scrolls the
+image in whole texels, as the N64's point-sampled RDP shows it.
+
+**Sprites:** `rt64/0013` placed the texture at the sprite's exact position
+inside a rectangle whose edges are rounded to whole pixels, so edges stepped
+while the image moved smoothly, and the strips of one image met a fraction
+of a pixel apart or overlapped. Sprites with clamped textures are now drawn
+as quads with their corners at the exact position (the path rotated sprites
+use, `rt64/0014`): each edge moves with its image and neighbouring strips
+share their edge. Wrapping (tiled) textures keep the plain rectangle.
+Checked at 2x and 3x: the pause panel and the castle clouds have no lines.
+
 ## Round 42: lines through the castle screen's clouds (issue #22)
 
 **Report:** on the continue / game over screen (the castle), the clouds have
