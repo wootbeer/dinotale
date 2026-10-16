@@ -6,7 +6,7 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
-## Round 43: wiggling edges, lines through strips (issue #16, #22)
+## Round 43: lines through strip images, wiggling edges (issues #16, #22)
 
 **Report:** after Yoshi stops, the left edges of 1-1's tall hills wiggle for a
 moment before settling; the castle screen's clouds wiggle at their left edge
@@ -18,24 +18,28 @@ layers on whole native pixels. Backgrounds: the hills' wiggle went away.
 Sprites: the clouds' edges stopped wiggling but the lines through clouds and
 message boxes got bigger.
 
-**Backgrounds:** a layer scrolled by a fraction of a texel moves smoothly at
-high resolutions, but it's drawn in strips loaded separately, and parts of
-its edges (1-1's tall hills) stepped back and forth as the camera settled.
-`bg1Cyc` scrolls the image in whole texels, as the N64's point-sampled RDP
-shows it. (Dropping this for a test brought the hills' wiggle back.)
+**What was tried** (each tested on Windows at high resolution):
 
-**Sprites:** `rt64/0013` placed the texture at the sprite's exact position
-inside a rectangle whose edges are rounded to whole pixels: edges stepped
-while the image moved smoothly, and the strips of one image met a fraction of
-a pixel apart or overlapped (the line in message boxes). Images drawn in
-strips trim their edges (`G_OBJRM_SHRINKSIZE`); those are now drawn on whole
-pixels, both edges rounded and the image fitted exactly between them (a quad,
-the path rotated sprites use): neighbouring strips share their rounded edge
-and the image moves with its edges. Message boxes: no line at all; castle
-clouds: no lines, edges move in whole steps. Rounding every sprite was tried:
-groups of small sprites (1-1's picket fence) jittered against each other, so
-other sprites keep the sub-pixel placement. Exact sub-pixel quads were tried
-too and made the fence worse.
+| Backgrounds | Sprites | Hill edge | Fence, fruit | Message boxes, castle clouds |
+|---|---|---|---|---|
+| sub-pixel | sub-pixel (0013) | wiggles | ok | tiny line; cloud edges wiggle |
+| whole texels | start rounded, size kept | ok | fence wiggles | bigger lines |
+| whole texels | exact sub-pixel quads | wiggles | fence much worse | - |
+| whole texels | all on whole pixels, fitted | ok | fence much worse | perfect |
+| sub-pixel | all on whole pixels, fitted | wiggles | fence much worse | perfect |
+| whole texels | strip images fitted, others 0013 | wiggles | fence, fruit wiggle | perfect |
+
+The hill edge is only calm when backgrounds and every sprite are on whole
+pixels, which suggests sprites drawn over a background layer sliding against
+it; but small sprites fitted to whole pixels change width by a pixel now and
+then and wobble.
+
+**Kept:** large images drawn in strips (G_OBJRM_SHRINKSIZE, at least 64
+texels wide: message boxes, clouds) are drawn on whole pixels, both edges
+rounded and the image fitted exactly between them (a quad, the path rotated
+sprites use): neighbouring strips share their edge, so no lines, and the
+image moves with its edges. Backgrounds and other sprites are as before.
+The hill wiggle (#16) stays open.
 
 ## Round 42: lines through the castle screen's clouds (issue #22)
 
