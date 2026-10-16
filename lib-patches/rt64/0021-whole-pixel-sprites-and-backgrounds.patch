@@ -14,7 +14,7 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
              int32_t imageYorig = scaleBg.imageYorig;
  
              // Keep scrolling down the image one row at a time if the 
-@@ -744,27 +750,61 @@
+@@ -744,27 +750,66 @@
                  y1 -= insetY;
              }
  
@@ -51,12 +51,20 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +                return;
 +            }
 +
-+            // Drawn as a quad with its corners at the sprite's exact (sub-pixel) position, like a rotated sprite
-+            // (see doObjSprite). A rectangle's edges are rounded to whole pixels, so with the texture placed at
-+            // the exact position the edges stepped while the image moved smoothly (edges wiggling as a sprite
-+            // drifted), and the strips of one image (text boxes, clouds) met a fraction of a pixel apart or
-+            // overlapped (lines through them). Exact corners keep each edge with its image, and neighbouring
-+            // strips share their edge.
++            // Drawn on whole pixels, with both edges of the rectangle rounded and the image fitted exactly
++            // between them, as a quad (the path rotated sprites use, see doObjSprite). Like the N64, a sprite then
++            // moves in whole pixels with its image. Placing the image at the sprite's sub-pixel position inside a
++            // rectangle whose edges the renderer rounds made the edges step while the image moved smoothly
++            // (wiggling edges, issue #16), and rounding only a strip's start left the strips of one image (text
++            // boxes, clouds) overlapping or apart. Here neighbouring strips share their rounded edge.
++            x0 = std::round(x0);
++            y0 = std::round(y0);
++            x1 = std::round(x1);
++            y1 = std::round(y1);
++            if ((x1 <= x0) || (y1 <= y0)) {
++                return;
++            }
++
 +            float s0 = shrink, s1 = o.imageW - shrink;
 +            float t0 = shrink, t1 = o.imageH - shrink;
 +            if (flipS) {
@@ -79,13 +87,10 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +                quad.tc[i][1] = ts[i];
 +            }
 +
-+            const int32_t ulx = int32_t(std::floor(x0)) * 4;
-+            const int32_t uly = int32_t(std::floor(y0)) * 4;
-+            const int32_t lrx = int32_t(std::ceil(x1)) * 4;
-+            const int32_t lry = int32_t(std::ceil(y1)) * 4;
-+            if ((lrx <= ulx) || (lry <= uly)) {
-+                return;
-+            }
++            const int32_t ulx = int32_t(x0) * 4;
++            const int32_t uly = int32_t(y0) * 4;
++            const int32_t lrx = int32_t(x1) * 4;
++            const int32_t lry = int32_t(y1) * 4;
 +
 +            // The rectangle's own texture coordinates only bound the texels it samples: the whole image.
 +            const int16_t rectDsdx = int16_t(std::lround(o.imageW * 4096.0f / float(lrx - ulx)));

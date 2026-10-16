@@ -3,8 +3,9 @@
 ## Unreleased
 
 - Background edges (like 1-1's tall hills) no longer wiggle when Yoshi stops.
-- Sprites are placed exactly: their edges no longer wiggle as they move, and
-  images drawn in strips (message boxes, clouds) have no lines at the joins.
+- Sprites move in whole pixels with their image, as on the N64: no wiggling
+  edges, and images drawn in strips (message boxes, clouds) have no lines at
+  the joins.
 - Fixed lines through the clouds on the continue / game over screen.
 - Expand: things no longer vanish at the edge of the 4:3 area: enemies like
   5-4's bob-ombs stay until they leave the wider screen, and the stilt Shy

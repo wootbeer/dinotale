@@ -25,12 +25,16 @@ image in whole texels, as the N64's point-sampled RDP shows it.
 
 **Sprites:** `rt64/0013` placed the texture at the sprite's exact position
 inside a rectangle whose edges are rounded to whole pixels, so edges stepped
-while the image moved smoothly, and the strips of one image met a fraction
-of a pixel apart or overlapped. Sprites with clamped textures are now drawn
-as quads with their corners at the exact position (the path rotated sprites
-use, `rt64/0014`): each edge moves with its image and neighbouring strips
-share their edge. Wrapping (tiled) textures keep the plain rectangle.
-Checked at 2x and 3x: the pause panel and the castle clouds have no lines.
+while the image moved smoothly. A first try drew sprites as quads at their
+exact sub-pixel corners: the hills still wiggled (their edges come from
+sprites too; the switch had fixed them by rounding sprites) and the picket
+fence wiggled much more. Now a sprite with a clamped texture is drawn on whole
+pixels, both edges of its rectangle rounded and the image fitted exactly
+between them (a quad, the path rotated sprites use): it moves in whole pixels
+with its image, as on the N64, and neighbouring strips of one image share
+their rounded edge, so no lines. (The switch rounded only a strip's start,
+which is why its lines got bigger.) Wrapping (tiled) textures keep the plain
+rectangle.
 
 ## Round 42: lines through the castle screen's clouds (issue #22)
 
