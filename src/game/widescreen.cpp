@@ -12,7 +12,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <cstdlib>
 
 #include <SDL.h>
 
@@ -172,12 +171,6 @@ extern "C" void dinotale_bg_view_freed(uint8_t* rdram, uint32_t layer) {
 // left edge to its centre (func_8004FEC8, func_80058CC0). Returns the float
 // bits for the $at register.
 extern "C" uint32_t dinotale_camera_half_width_bits() {
-    // Diagnostic (issue #16): DINOTALE_NARROW_CAMERA keeps the probe at the N64's 160, to test whether the
-    // widened probe makes the camera stop (and snap) at camera walls in places it otherwise wouldn't.
-    static const bool narrow = (std::getenv("DINOTALE_NARROW_CAMERA") != nullptr);
-    if (narrow) {
-        return float_bits(float(original_view_width) / 2.0f);
-    }
     return float_bits(float(active_view_width()) / 2.0f);
 }
 

@@ -1,25 +1,37 @@
 diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -744,6 +744,61 @@
+@@ -323,6 +323,12 @@
+             }
+ 
+             int16_t imageY0 = scaleBg.imageY + (pixY0 * scaleH >> 7);
++
++            // DinoTale: scroll the image in whole texels, as the N64's point-sampled RDP shows it, in step with
++            // the sprites drawn over it (see drawObjRect). Sub-texel scrolling under whole-pixel sprites, or the
++            // other way round, made edges where the two meet (1-1's tall hills) wiggle (issue #16).
++            imageX0 = int16_t((imageX0 + 16) & ~0x1F);
++            imageY0 = int16_t((imageY0 + 16) & ~0x1F);
+             int32_t imageYorig = scaleBg.imageYorig;
+ 
+             // Keep scrolling down the image one row at a time if the 
+@@ -744,6 +750,60 @@
                  y1 -= insetY;
              }
  
-+            // Large images drawn in strips (text boxes, clouds) trim their edges (G_OBJRM_SHRINKSIZE). Draw those on
-+            // whole pixels, both edges of the rectangle rounded and the image fitted exactly between them, as a quad
-+            // (the path rotated sprites use, see doObjSprite): neighbouring strips share their rounded edge, so
-+            // there are no lines at the joins, and the image moves in whole pixels with its edges instead of sliding
-+            // inside them. Small sprites (fruit, 1-1's picket fence) keep the sub-pixel placement below: fitted to
-+            // whole pixels their width changed by a pixel now and then, and they wobbled.
-+            const bool largeStripImage = (shrink > 0.0f) && (o.imageW >= 64.0f);
-+            if (largeStripImage && ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0)) {
-+                // Horizontally the width is rounded once, so the sprite keeps its size as it moves sideways (rounding
-+                // both edges made a 64.2-pixel fence 64 or 65 pixels wide by turns, and its pickets wobbled).
-+                // Vertically both edges are rounded: that's where strips of one image meet.
++            // Sprites with clamped textures are drawn on whole pixels like on the N64 (in step with the background
++            // layers, which scroll in whole texels), as a quad with the image fitted exactly between the rounded
++            // edges (the path rotated sprites use, see doObjSprite). Placing the image at the sprite's sub-pixel
++            // position inside a rectangle whose edges are rounded made edges wiggle against the image and against
++            // the backgrounds (issue #16), and strips of one image (text boxes, clouds) meet without lines.
++            // The width (and, for sprites that aren't strips, the height) is rounded once and kept, so a sprite
++            // doesn't change size by a pixel as it moves (that made 1-1's picket fence and fruit wobble). Images
++            // drawn in strips trim their edges (G_OBJRM_SHRINKSIZE); for those both vertical edges are rounded so
++            // stacked strips share them.
++            if ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0) {
 +                const float qx0 = std::round(x0);
 +                const float qx1 = qx0 + std::round(x1 - x0);
 +                const float qy0 = std::round(y0);
-+                const float qy1 = std::round(y1);
++                const float qy1 = (shrink > 0.0f) ? std::round(y1) : qy0 + std::round(y1 - y0);
 +                if ((qx1 <= qx0) || (qy1 <= qy0)) {
 +                    return;
 +                }

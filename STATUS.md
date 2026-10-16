@@ -41,6 +41,15 @@ sprites use): neighbouring strips share their edge, so no lines, and the
 image moves with its edges. Backgrounds and other sprites are as before.
 The hill wiggle (#16) stays open.
 
+| whole texels | all on whole pixels, width kept, strip edges fitted | ? | ? | ? |
+
+The camera was ruled out: logged per frame in Original aspect it eases to a
+stop smoothly, and the hill wiggles with or without the widened camera-wall
+probe (temporary `DINOTALE_NARROW_CAMERA` switch, now removed). So back to
+the switch's combination (whole-texel backgrounds, every sprite on whole
+pixels), without its two faults: sprites keep their width (and, unless
+they're strips, their height), and strips share their rounded edges.
+
 **Picket fence:** it's one 64x32 sprite at scale 1.003 with the strip flag
 (render mode 0x18), so it took the strip path, where rounding both edges made
 it 64 or 65 pixels wide by turns. Horizontally the width is now rounded once
