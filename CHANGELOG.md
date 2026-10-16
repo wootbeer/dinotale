@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Background edges (like 1-1's tall hills) no longer wiggle when Yoshi stops.
+- 1-1's tall hills no longer wiggle at their edges when Yoshi stops.
 - Sprites move in whole pixels with their image, as on the N64: no wiggling
   edges, and images drawn in strips (message boxes, clouds) have no lines at
   the joins.

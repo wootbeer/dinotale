@@ -1,20 +1,7 @@
 diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -323,6 +323,12 @@
-             }
- 
-             int16_t imageY0 = scaleBg.imageY + (pixY0 * scaleH >> 7);
-+
-+            // DinoTale: scroll the image in whole texels, as the N64's point-sampled RDP shows it. At higher
-+            // resolutions a fraction of a texel moves the image smoothly, but the layer is drawn in strips loaded
-+            // separately, and parts of its edges stepped back and forth as the camera settled (issue #16).
-+            imageX0 = int16_t((imageX0 + 16) & ~0x1F);
-+            imageY0 = int16_t((imageY0 + 16) & ~0x1F);
-             int32_t imageYorig = scaleBg.imageYorig;
- 
-             // Keep scrolling down the image one row at a time if the 
-@@ -744,27 +750,66 @@
+@@ -744,27 +744,66 @@
                  y1 -= insetY;
              }
  

@@ -18,10 +18,9 @@ layers on whole native pixels. Backgrounds: the hills' wiggle went away.
 Sprites: the clouds' edges stopped wiggling but the lines through clouds and
 message boxes got bigger.
 
-**Backgrounds:** a layer scrolled by a fraction of a texel moves smoothly at
-high resolutions, but it's drawn in strips loaded separately and parts of its
-edges stepped back and forth as the camera settled. `bg1Cyc` now scrolls the
-image in whole texels, as the N64's point-sampled RDP shows it.
+**Backgrounds:** scrolling them in whole texels was tried and dropped: it
+didn't help the hills (whose edges turned out to come from sprites) and made
+the picket fence wiggle much more.
 
 **Sprites:** `rt64/0013` placed the texture at the sprite's exact position
 inside a rectangle whose edges are rounded to whole pixels, so edges stepped
