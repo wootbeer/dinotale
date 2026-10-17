@@ -1,0 +1,16 @@
+diff --git a/recompui/src/config/ui_config_tab_graphics.cpp b/recompui/src/config/ui_config_tab_graphics.cpp
+--- a/recompui/src/config/ui_config_tab_graphics.cpp
++++ b/recompui/src/config/ui_config_tab_graphics.cpp
+@@ -390,10 +390,10 @@
+             config.add_enum_option(
+                 graphics::options::api_option,
+                 "Graphics API",
+-                "Selects the graphics API to use.",
++                "Selects the graphics API to use. <recomp-color primary>Auto</recomp-color> uses D3D12 on Windows; try <recomp-color primary>Vulkan</recomp-color> if the game crashes in the graphics driver. Takes effect the next time the game starts.",
+                 graphics_api_options,
+                 ultramodern::renderer::GraphicsApi::Auto,
+-                true
++                false
+             );
+ 
+             config.add_enum_option(

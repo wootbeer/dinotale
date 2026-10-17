@@ -6,6 +6,22 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 46: the 4-4 driver crash is back (issue #17)
+
+**Report:** on 0.1.4 (with Round 40's 8 MB stacks), 4-4 crashed twice more.
+Same log: access violation at offset 0x7482ee in `nvwgf2umx.dll` on the Gfx
+Thread, writing 0x20 below a 1 MB-aligned address.
+
+**So:** the bigger stacks didn't change it; the stack theory was probably
+wrong. The crash is inside NVIDIA's D3D12 driver (`nvwgf2umx.dll`), at one
+instruction every time. Not reproducible here (no NVIDIA GPU).
+
+**Change:** the Graphics API option (Auto / D3D12 / Vulkan), which the
+frontend hides, is shown in the graphics settings, so a player hitting this
+can switch to Vulkan, which doesn't go through that DLL (`RecompFrontend/0002`;
+it applies at the next start). Whether Vulkan avoids the crash tells us if
+it's D3D12-specific.
+
 ## Round 45: flashing strip at the right edge after a teleport (Expand)
 
 **Report:** after the page-turn of 1-1's first reachable teleport, the

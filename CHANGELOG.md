@@ -4,6 +4,8 @@
 
 - Expand: water reflections (4-2), goo (2-3) and the page-turn transition
   cover the whole wide screen.
+- The Graphics API setting (Auto, D3D12, Vulkan) is shown in the graphics
+  options. If the game crashes in the graphics driver on Windows, try Vulkan.
 - Expand: no more flashing strip at the right edge after a teleport (and
   at a level's start): the backgrounds are filled all the way across.
 - Message boxes and clouds (images drawn in strips) have no lines at the
