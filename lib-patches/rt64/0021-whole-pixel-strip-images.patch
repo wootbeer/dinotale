@@ -1,7 +1,7 @@
 diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -744,6 +744,61 @@
+@@ -744,6 +744,63 @@
                  y1 -= insetY;
              }
  
@@ -15,11 +15,13 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +            if (largeStripImage && ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0)) {
 +                // Horizontally the width is rounded once, so the sprite keeps its size as it moves sideways (rounding
 +                // both edges made a 64.2-pixel fence 64 or 65 pixels wide by turns, and its pickets wobbled).
-+                // Vertically both edges are rounded: that's where strips of one image meet.
++                // Vertically the edges stay where the game puts them: strips of one image meet there, and since the
++                // bottom of one is exactly the top of the next they still share the edge. Rounding them made 1-1's
++                // hills step up and down a pixel at a time as the camera followed a jump.
 +                const float qx0 = std::round(x0);
 +                const float qx1 = qx0 + std::round(x1 - x0);
-+                const float qy0 = std::round(y0);
-+                const float qy1 = std::round(y1);
++                const float qy0 = y0;
++                const float qy1 = y1;
 +                if ((qx1 <= qx0) || (qy1 <= qy0)) {
 +                    return;
 +                }
@@ -47,9 +49,9 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +                }
 +
 +                const int32_t qulx = int32_t(qx0) * 4;
-+                const int32_t quly = int32_t(qy0) * 4;
++                const int32_t quly = int32_t(std::floor(qy0)) * 4;
 +                const int32_t qlrx = int32_t(qx1) * 4;
-+                const int32_t qlry = int32_t(qy1) * 4;
++                const int32_t qlry = int32_t(std::ceil(qy1)) * 4;
 +
 +                // The rectangle's own texture coordinates only bound the texels it samples: the whole image.
 +                const int16_t rectDsdx = int16_t(std::lround(o.imageW * 4096.0f / float(qlrx - qulx)));

@@ -6,6 +6,21 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 47: hills stepping up and down on a jump (issue #16)
+
+**Report:** since Round 43, 1-1's tall hills wiggle up and down when Yoshi
+jumps; not in 0.1.4 (where their right edges wiggled a little instead).
+
+**Cause:** the hills are large strip images (256x8 strips, drawn with
+G_OBJRM_SHRINKSIZE), which `rt64/0021` puts on whole pixels, vertically too.
+As the camera follows a jump their sub-pixel height changes and they stepped
+a whole pixel at a time while everything else moved smoothly.
+
+**Fix:** `rt64/0021` keeps the strips' top and bottom where the game puts
+them. Strips of one image still meet exactly (the bottom of one is the top of
+the next), so no lines; checked at 3x mid-jump. Horizontally nothing changes
+(the width stays fixed, which calmed the fence).
+
 ## Round 46: the 4-4 driver crash is back (issue #17)
 
 **Report:** on 0.1.4 (with Round 40's 8 MB stacks), 4-4 crashed twice more.
