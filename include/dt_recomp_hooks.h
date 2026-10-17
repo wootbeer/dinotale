@@ -29,6 +29,7 @@ void dinotale_fruit_frame_begin(uint8_t* rdram, uint32_t frame);
 void dinotale_fruit_frame_end(uint8_t* rdram);
 void dinotale_hud_actor_screen_pos(uint8_t* rdram, recomp_context* ctx);
 int32_t dinotale_bg_row_columns(int32_t columns);
+int32_t dinotale_bg_fill_columns(uint8_t* rdram, uint32_t view, int32_t columns);
 uint32_t dinotale_screen_margin_bits(uint8_t* rdram, uint32_t actor, int32_t side);
 int32_t dinotale_screen_left_test(uint8_t* rdram, uint32_t actor, int32_t value);
 int32_t dinotale_screen_right_test(int32_t value);

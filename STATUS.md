@@ -6,6 +6,27 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 45: flashing strip at the right edge after a teleport (Expand)
+
+**Report:** after the page-turn of 1-1's first reachable teleport, the
+rightmost few pixels flash; Expand only.
+
+**Diagnosis:** a temporary log (`DINOTALE_BG_LOG`) showed the background
+layers' frames and scissors unchanged after the teleport (432 px wide from
+-56, covering the wider view), and the clip showed the strip holding pieces
+of the curling page, different in each of the three screen buffers: nothing
+was drawn there. A background layer is a ring buffer of 16-pixel tile
+columns the game streams in as the camera moves. A full refill
+(func_8004FA64: a level's start, a teleport or area change) asks for the
+view's width in columns from the view's left column, without the extra
+column the row request (func_8004FB98) adds when the view's left edge isn't
+on a tile boundary. Expand's view starts 56 px left of the 4:3 one, half a
+tile off, so the refill (27 columns) stopped 8 px short of the layer's right
+edge; with every layer empty there, the screen showed what was left in it.
+
+**Fix:** a hook in func_8004FA64 adds the column when the view's left edge
+isn't on a tile boundary (28 columns, the ring buffer's width).
+
 ## Round 44: screen-copy effects in Expand (issues #9, #11, #21)
 
 **Reports:** in Expand, 4-2's water reflection and 2-3's goo stop at the 4:3

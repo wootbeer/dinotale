@@ -186,6 +186,20 @@ extern "C" int32_t dinotale_bg_row_columns(int32_t columns) {
     return (columns * width + original_view_width - 1) / original_view_width;
 }
 
+// The number of 16-pixel tile columns in a background layer's full refill
+// (func_8004FA64), the view's width rounded up to whole columns. Like the row
+// request, add one when the view's left edge (view +0x2) isn't on a tile
+// boundary, or the refill stops short of the right edge by that much. Expand's
+// view is 56 px wider each side than the N64's (half a tile), so after a
+// teleport the last 8 px of the layers stayed empty.
+extern "C" int32_t dinotale_bg_fill_columns(uint8_t* rdram, uint32_t view, int32_t columns) {
+    if ((view & 0xFF800000) != 0x80000000) {
+        return columns;
+    }
+    const int16_t left = *reinterpret_cast<int16_t*>(rdram + ((view + 0x2 - 0x80000000) ^ 2));
+    return ((left & 0xF) != 0) ? (columns + 1) : columns;
+}
+
 // Keeping Yoshi on screen. func_800233B4 checks his screen x (actor +0x34,
 // in the 320-wide view's pixels) less/plus half his width against 16 and
 // 304, and past either calls func_80023310, which puts him back at the

@@ -206,6 +206,18 @@ func = "func_8004FB98"
 before_vram = 0x8004FBF4
 text = "ctx->r9 = dinotale_bg_row_columns(ctx->r9);"
 
+# A background layer's full refill (func_8004FA64: a level's start, a teleport
+# or area change) requests the view's width in 16-pixel tile columns from the
+# view's left column, without the extra column the row request adds when the
+# view isn't on a tile boundary. Expand's view starts 56 px left of the 4:3
+# one (half a tile off), so the refill stopped 8 px short of the right edge,
+# which showed whatever was left there (after a teleport, the page turn).
+# The count is in $t6 at 0x8004FADC; the view is at sp+0x1C.
+[[patches.hook]]
+func = "func_8004FA64"
+before_vram = 0x8004FADC
+text = "ctx->r14 = dinotale_bg_fill_columns(rdram, (uint32_t)MEM_W(0x1C, ctx->r29), (int32_t)ctx->r14);"
+
 # Expand: keeping Yoshi on screen. func_800233B4 checks his screen x against
 # 16 and 304 (the 320-wide screen less 16 px) and past either calls
 # func_80023310, which puts him back at the camera's centre -/+ 144. Move
