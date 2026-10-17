@@ -1,0 +1,50 @@
+diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuffer_renderer.cpp
+--- a/src/render/rt64_framebuffer_renderer.cpp
++++ b/src/render/rt64_framebuffer_renderer.cpp
+@@ -1508,6 +1508,9 @@
+ 
+             for (uint32_t d = 0; (d < proj.gameCallCount) && (globalCallIndex < p.maxGameCall); d++) {
+                 const GameCall &call = proj.gameCalls[d];
++                bool restoreScreenTransform = false;
++                hlslpp::float2 stretchedScreenScale = triangles.screenScale;
++                hlslpp::float2 stretchedScreenOffset = triangles.screenOffset;
+                 renderIndices.instanceIndex = call.callDesc.callIndex;
+                 renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
+                 renderIndices.rdpTileIndex = call.callDesc.tileIndex;
+@@ -1631,6 +1634,24 @@
+                             instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
+                             triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
+                             invRatioScale = projInvRatioScale;
++
++                            // DinoTale: geometry textured with a copy of the screen (water reflections, page turns) samples
++                            // the copy in native coordinates, which cover the whole widened target. Drawn at the original
++                            // width it shows the wide picture squeezed into the 4:3 middle and nothing at the sides; stretch
++                            // it across the widened screen so each point samples the copy where it is.
++                            if ((proj.type == Projection::Type::Orthographic) && (aspectRatioScale > 1.0f)) {
++                                bool tileCopiesUsed = false;
++                                for (uint32_t t = 0; (t < call.callDesc.tileCount) && !tileCopiesUsed; t++) {
++                                    tileCopiesUsed = drawData.callTiles[call.callDesc.tileIndex + t].tileCopyUsed;
++                                }
++
++                                if (tileCopiesUsed) {
++                                    restoreScreenTransform = true;
++                                    triangles.screenScale.x *= aspectRatioScale;
++                                    triangles.screenOffset.x = halfPixelOffset.x + (triangles.screenOffset.x - halfPixelOffset.x) * aspectRatioScale;
++                                }
++                            }
++
+                             break;
+                         }
+                         case Projection::Type::Rectangle: {
+@@ -1760,6 +1781,11 @@
+                 }
+ 
+                 instanceDrawCallVector.push_back(instanceDrawCall);
++                if (restoreScreenTransform) {
++                    triangles.screenScale = stretchedScreenScale;
++                    triangles.screenOffset = stretchedScreenOffset;
++                }
++
+                 globalCallIndex++;
+             }
+         }

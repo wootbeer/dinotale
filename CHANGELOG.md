@@ -2,6 +2,8 @@
 
 ## 0.1.5
 
+- Expand: water reflections (4-2), goo (2-3) and the page-turn transition
+  cover the whole wide screen.
 - Message boxes and clouds (images drawn in strips) have no lines at the
   joins, and their edges no longer wiggle as they move.
 - Fixed lines through the clouds on the continue / game over screen.

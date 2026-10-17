@@ -6,6 +6,26 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 44: screen-copy effects in Expand (issues #9, #11, #21)
+
+**Reports:** in Expand, 4-2's water reflection and 2-3's goo stop at the 4:3
+edge; the page-turn transition (pots, area changes, the jump-on teleporters)
+shows one page at 4:3 inside the wider one.
+
+**Cause:** these effects draw geometry (orthographic triangles) textured with
+a copy of the screen the game just drew (4-2: 4-row strips from x -160 to
+160, sampling the 320-wide framebuffer). In Expand RT64's render target is
+wider, and the copy's native coordinates (0..320) cover the whole widened
+target; but the triangles are drawn at the original width, in the 4:3
+middle. So the wide picture was squeezed into the middle and the sides had
+nothing.
+
+**Fix** (`rt64/0022`): an orthographic draw that samples a copy of the screen
+is stretched across the widened screen (RT64 already does this for
+rectangles), so each point samples the copy where it is. 4-2: the reflection
+spans the whole width and lines up with the platforms; Original aspect is
+unchanged.
+
 ## Round 43: lines through strip images, wiggling edges (issues #16, #22)
 
 **Report:** after Yoshi stops, the left edges of 1-1's tall hills wiggle for a
