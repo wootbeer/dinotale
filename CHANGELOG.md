@@ -11,6 +11,8 @@
 - Message boxes and clouds (images drawn in strips) have no lines at the
   joins, and their edges no longer wiggle as they move.
 - Fixed lines through the clouds on the continue / game over screen.
+- Less wobble in moving scenery: 1-1's picket fence and fruit are calmer,
+  and hills and clouds move smoothly when Yoshi jumps.
 - Expand: things no longer vanish at the edge of the 4:3 area: enemies like
   5-4's bob-ombs stay until they leave the wider screen, and the stilt Shy
   Guys' stilts show across it.
