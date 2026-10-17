@@ -20,7 +20,8 @@ target; but the triangles are drawn at the original width, in the 4:3
 middle. So the wide picture was squeezed into the middle and the sides had
 nothing.
 
-**Fix** (`rt64/0022`): an orthographic draw that samples a copy of the screen
+**Fix** (`rt64/0022`): a draw that samples a copy of the screen (orthographic,
+or perspective like the page turn's curling page)
 is stretched across the widened screen (RT64 already does this for
 rectangles), so each point samples the copy where it is. 4-2: the reflection
 spans the whole width and lines up with the platforms; Original aspect is

@@ -11,16 +11,17 @@ diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuf
                  renderIndices.instanceIndex = call.callDesc.callIndex;
                  renderIndices.faceIndicesStart = call.meshDesc.faceIndicesStart;
                  renderIndices.rdpTileIndex = call.callDesc.tileIndex;
-@@ -1631,6 +1634,24 @@
+@@ -1631,6 +1634,25 @@
                              instanceDrawCall.type = InstanceDrawCall::Type::IndexedTriangles;
                              triangles.indexStart = triangles.vertexTestZ ? vertexTestZFaceIndicesStart : call.meshDesc.faceIndicesStart;
                              invRatioScale = projInvRatioScale;
 +
-+                            // DinoTale: geometry textured with a copy of the screen (water reflections, page turns) samples
-+                            // the copy in native coordinates, which cover the whole widened target. Drawn at the original
-+                            // width it shows the wide picture squeezed into the 4:3 middle and nothing at the sides; stretch
-+                            // it across the widened screen so each point samples the copy where it is.
-+                            if ((proj.type == Projection::Type::Orthographic) && (aspectRatioScale > 1.0f)) {
++                            // DinoTale: geometry textured with a copy of the screen (water reflections, goo, the page turn's
++                            // curling page, drawn with a perspective camera) samples the copy in native coordinates, which
++                            // cover the whole widened target. Drawn at the original width it shows the wide picture squeezed
++                            // into the 4:3 middle and nothing at the sides; stretch it across the widened screen so each
++                            // point samples the copy where it is.
++                            if (aspectRatioScale > 1.0f) {
 +                                bool tileCopiesUsed = false;
 +                                for (uint32_t t = 0; (t < call.callDesc.tileCount) && !tileCopiesUsed; t++) {
 +                                    tileCopiesUsed = drawData.callTiles[call.callDesc.tileIndex + t].tileCopyUsed;
@@ -36,7 +37,7 @@ diff --git a/src/render/rt64_framebuffer_renderer.cpp b/src/render/rt64_framebuf
                              break;
                          }
                          case Projection::Type::Rectangle: {
-@@ -1760,6 +1781,11 @@
+@@ -1760,6 +1782,11 @@
                  }
  
                  instanceDrawCallVector.push_back(instanceDrawCall);
