@@ -21,6 +21,13 @@ them. Strips of one image still meet exactly (the bottom of one is the top of
 the next), so no lines; checked at 3x mid-jump. Horizontally nothing changes
 (the width stays fixed, which calmed the fence).
 
+**Round 47b:** the hills stopped stepping, but the cardboard clouds then
+wobbled up and down on a jump. They're drawn scaled (16-row strips drawn 15.55
+px tall), and at a fraction of a pixel their rows land on different pixels as
+they move. The hills are drawn at their own height (8-row strips, 7 px after
+the half-texel trim each side). So only images drawn at their own height keep
+exact edges; scaled ones are rounded as before.
+
 ## Round 46: the 4-4 driver crash is back (issue #17)
 
 **Report:** on 0.1.4 (with Round 40's 8 MB stacks), 4-4 crashed twice more.

@@ -1,7 +1,7 @@
 diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 --- a/src/gbi/rt64_gbi_s2dex.cpp
 +++ b/src/gbi/rt64_gbi_s2dex.cpp
-@@ -744,6 +744,63 @@
+@@ -744,6 +744,66 @@
                  y1 -= insetY;
              }
  
@@ -15,13 +15,16 @@ diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
 +            if (largeStripImage && ((objRenderMode & S2DEX_G_OBJRM_NOTXCLAMP) == 0)) {
 +                // Horizontally the width is rounded once, so the sprite keeps its size as it moves sideways (rounding
 +                // both edges made a 64.2-pixel fence 64 or 65 pixels wide by turns, and its pickets wobbled).
-+                // Vertically the edges stay where the game puts them: strips of one image meet there, and since the
-+                // bottom of one is exactly the top of the next they still share the edge. Rounding them made 1-1's
-+                // hills step up and down a pixel at a time as the camera followed a jump.
++                // Vertically, strips of one image meet: the bottom of one is exactly the top of the next. An image drawn
++                // at its own height (1-1's hills) keeps the edges where the game puts them, so it moves smoothly as the
++                // camera follows a jump (rounded, the hills stepped a pixel at a time). A scaled one (1-1's cardboard
++                // clouds, 16 rows drawn 15.55 pixels tall) has both edges rounded: at a fraction of a pixel its rows
++                // land on different pixels as it moves, and it wobbled.
 +                const float qx0 = std::round(x0);
 +                const float qx1 = qx0 + std::round(x1 - x0);
-+                const float qy0 = y0;
-+                const float qy1 = y1;
++                const bool unscaledY = std::fabs(std::fabs(y1 - y0) - (o.imageH - 2.0f * shrink)) < 0.01f;
++                const float qy0 = unscaledY ? y0 : std::round(y0);
++                const float qy1 = unscaledY ? y1 : std::round(y1);
 +                if ((qx1 <= qx0) || (qy1 <= qy0)) {
 +                    return;
 +                }
