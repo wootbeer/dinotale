@@ -5,17 +5,17 @@
 # Run from the repo root, after the one-time steps in BUILDING.md (N64Recomp
 # run, so RecompiledFuncs/ exists, and the ROM at yoshisstory.us.z64):
 #
-#   tools/package-linux.sh 0.1.5
+#   tools/package-linux.sh 0.1.6
 #
 # Builds with the linux-release preset (or an already configured build
-# folder: BUILD_DIR=build tools/package-linux.sh 0.1.5), then stages the
+# folder: BUILD_DIR=build tools/package-linux.sh 0.1.6), then stages the
 # executable, the assets folder, README, CHANGELOG, license and the
 # third-party license notices into dist/DinoTale-<version>-linux.tar.gz.
 # The executable uses the system's SDL2, GTK 3 and FreeType (all present on
 # SteamOS) and links libstdc++ statically.
 set -euo pipefail
 
-version="${1:-0.1.5}"
+version="${1:-0.1.6}"
 root="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$root"
 
