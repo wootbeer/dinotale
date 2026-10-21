@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The green of chalkboards and message boxes (results, options) reaches the
+  bottom of the frame instead of leaving a black band.
+
 ## 0.1.5
 
 - Expand: water reflections (4-2), goo (2-3) and the page-turn transition

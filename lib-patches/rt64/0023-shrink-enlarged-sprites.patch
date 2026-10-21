@@ -1,0 +1,62 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -731,13 +731,22 @@
+                 shrink = 0.5f;
+             }
+ 
++            // DinoTale: the texels trimmed off each edge. A sprite drawn larger than its texture loses at most the
++            // same amount in screen pixels (half a pixel for SHRINKSIZE_1), and the texture starts that far in: that's
++            // as far as bilinear filtering reaches. Trimmed by whole texels, the 16x16 texture the game stretches 12
++            // times over a chalkboard or message box (results, options, signs) lost 6 pixels on every edge, which
++            // left a black band between the green and the bottom of the frame.
++            float shrinkS = shrink;
++            float shrinkT = shrink;
+             if (shrink > 0.0f) {
+-                const float insetX = shrink / stepS;
+-                const float insetY = shrink / stepT;
++                const float insetX = std::min(shrink / stepS, shrink);
++                const float insetY = std::min(shrink / stepT, shrink);
+                 if (((x1 - x0) <= 2.0f * insetX) || ((y1 - y0) <= 2.0f * insetY)) {
+                     return;
+                 }
+ 
++                shrinkS = insetX * stepS;
++                shrinkT = insetY * stepT;
+                 x0 += insetX;
+                 x1 -= insetX;
+                 y0 += insetY;
+@@ -761,15 +770,15 @@
+                 // land on different pixels as it moves, and it wobbled.
+                 const float qx0 = std::round(x0);
+                 const float qx1 = qx0 + std::round(x1 - x0);
+-                const bool unscaledY = std::fabs(std::fabs(y1 - y0) - (o.imageH - 2.0f * shrink)) < 0.01f;
++                const bool unscaledY = std::fabs(std::fabs(y1 - y0) - (o.imageH - 2.0f * shrinkT)) < 0.01f;
+                 const float qy0 = unscaledY ? y0 : std::round(y0);
+                 const float qy1 = unscaledY ? y1 : std::round(y1);
+                 if ((qx1 <= qx0) || (qy1 <= qy0)) {
+                     return;
+                 }
+ 
+-                float s0 = shrink, s1 = o.imageW - shrink;
+-                float t0 = shrink, t1 = o.imageH - shrink;
++                float s0 = shrinkS, s1 = o.imageW - shrinkS;
++                float t0 = shrinkT, t1 = o.imageH - shrinkT;
+                 if (flipS) {
+                     std::swap(s0, s1);
+                 }
+@@ -815,10 +824,10 @@
+             const float startY = clamped ? float((int32_t(std::lround(y0 * 4.0f)) + 3) >> 2) : y0;
+             const float leadS = (x0 - startX) * stepS;
+             const float leadT = (y0 - startY) * stepT;
+-            int16_t uls = int16_t(std::lround((shrink - leadS) * 32.0f));
+-            int16_t ult = int16_t(std::lround((shrink - leadT) * 32.0f));
+-            if (flipS) { uls = int16_t(std::lround((o.imageW - shrink + leadS) * 32.0f)) - 1; dsdx = -dsdx; }
+-            if (flipT) { ult = int16_t(std::lround((o.imageH - shrink + leadT) * 32.0f)) - 1; dtdy = -dtdy; }
++            int16_t uls = int16_t(std::lround((shrinkS - leadS) * 32.0f));
++            int16_t ult = int16_t(std::lround((shrinkT - leadT) * 32.0f));
++            if (flipS) { uls = int16_t(std::lround((o.imageW - shrinkS + leadS) * 32.0f)) - 1; dsdx = -dsdx; }
++            if (flipT) { ult = int16_t(std::lround((o.imageH - shrinkT + leadT) * 32.0f)) - 1; dtdy = -dtdy; }
+ 
+             const int32_t ulx = int32_t(std::lround(startX * 4.0f));
+             const int32_t uly = int32_t(std::lround(startY * 4.0f));

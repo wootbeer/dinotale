@@ -6,6 +6,26 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 48: chalkboards' green stops short of the bottom frame (issue #25)
+
+**Report:** on the results chalkboard (and message boxes) the green doesn't
+reach the bottom wooden frame; a black band shows between them. Reproduced on
+the Options chalkboard.
+
+**Cause:** the board's green is one 16x16 texture the game stretches about
+12 times over the whole board (a G_OBJ_SPRITE scaled to 241x193), drawn with
+G_OBJRM_SHRINKSIZE_1. RT64 (`rt64/0006`) trimmed half a texel off each edge
+in screen pixels: here 6 pixels. The frame hides it at the top and sides, but
+the bottom bar's top rows are empty (the same flipped image as the top bar,
+whose shadow falls on the green), so the green ended at y=203.75 and the wood
+started at 208.7.
+
+**Fix** (`rt64/0023`): a sprite drawn larger than its texture loses at most
+the trim in screen pixels (half a pixel), and its texture starts that far in;
+that's as far as bilinear filtering reaches. Sprites drawn at about their own
+size (strips, text boxes, clouds) are unchanged. The Options board's green now
+reaches the frame.
+
 ## Round 47: hills stepping up and down on a jump (issue #16)
 
 **Report:** since Round 43, 1-1's tall hills wiggle up and down when Yoshi
