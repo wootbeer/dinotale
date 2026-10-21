@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Expand: 5-4's stilt Shy Guys keep their stilts at the left edge of the
+  wider screen too (things no longer vanish in the left strip).
 - The green of chalkboards and message boxes (results, options) reaches the
   bottom of the frame instead of leaving a black band.
 

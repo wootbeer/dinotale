@@ -6,6 +6,19 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 49: stilts still missing in the left strip (issue #19)
+
+**Report:** after Round 41 the stilts show in the right strip but not the left.
+
+**Cause:** the shared on-screen test, func_800591EC, is strict on both sides,
+-margin < x < 320 + margin, so with no margin the on-screen columns are
+1..319. `dinotale_actor_screen_x` mapped the left strip to column 0, which
+fails with no margin; the right strip maps to 319, which passes. The stilt
+pieces are actors func_805175E4 spawns, tested with no margin.
+
+**Fix:** the left strip maps to column 1 (the leftmost visible column, -extra,
+still maps to 0 and is off screen, as column 0 is on the N64).
+
 ## Round 48: chalkboards' green stops short of the bottom frame (issue #25)
 
 **Report:** on the results chalkboard (and message boxes) the green doesn't

@@ -264,16 +264,19 @@ extern "C" uint32_t dinotale_screen_margin_bits(uint8_t* rdram, uint32_t actor, 
 // screen: whether to draw extra parts, start a timer, despawn. In Expand the
 // visible screen is wider, so give such a test the x it would see if the
 // screen were: inside the 320-wide view unchanged, in the extra strips the
-// nearest on-screen column (0 or 319), past them moved in by the strips'
-// width. A test against bounds outside 0..319 then shifts with the wider
-// view's edges. Only for loads used just for such a test.
+// nearest on-screen column, past them moved in by the strips' width. A test
+// against bounds outside 0..319 then shifts with the wider view's edges. Only
+// for loads used just for such a test. The shared test (func_800591EC) is
+// strict on both sides, -margin < x < 320 + margin: with no margin the
+// on-screen columns are 1..319, so the left strip maps to 1 (mapped to 0, 5-4's
+// stilts, spawned with no margin, were missing there).
 extern "C" int32_t dinotale_actor_screen_x(int32_t x) {
     const int32_t extra = int32_t(extra_screen_width());
     if (extra <= 0) {
         return x;
     }
     if (x < 0) {
-        return std::min(0, x + extra);
+        return std::min(1, x + extra);
     }
     if (x >= original_view_width) {
         return std::max(original_view_width - 1, x - extra);
