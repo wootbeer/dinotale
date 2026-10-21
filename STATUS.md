@@ -44,6 +44,11 @@ can switch to Vulkan, which doesn't go through that DLL (`RecompFrontend/0002`;
 it applies at the next start). Whether Vulkan avoids the crash tells us if
 it's D3D12-specific.
 
+**Later (issue #27):** the same crash in 5-1, after 0.1.5, at exactly the same
+host address (`0x23fc49fffe0`) as one of the 4-4 logs. The same address in
+separate runs points to a fixed buffer the driver writes past, not a stack.
+4-1, 4-4 and 5-1 all have full-screen water effects. Waiting on a Vulkan test.
+
 ## Round 45: flashing strip at the right edge after a teleport (Expand)
 
 **Report:** after the page-turn of 1-1's first reachable teleport, the
