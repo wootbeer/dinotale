@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.7
 
 - New setting, Graphics > Texture Filtering: Sharp draws sprites, the HUD and
   backgrounds with sharp pixels instead of the game's smooth filtering
