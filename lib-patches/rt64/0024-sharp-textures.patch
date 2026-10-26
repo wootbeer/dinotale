@@ -9,13 +9,20 @@ diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
  #include "rt64_interpreter.h"
  
  //#define ASSERT_ON_BLENDER_EMULATION
-@@ -991,6 +992,11 @@
+@@ -991,6 +992,18 @@
                      shaderDesc.otherMode = callDesc.otherMode;
                      shaderDesc.flags = {};
  
-+                    // DinoTale "Texture Filtering: Sharp": sample the textures without filtering (G_TF_POINT).
-+                    if (getSharpTextures()) {
-+                        shaderDesc.otherMode.H &= ~(3U << G_MDSFT_TEXTFILT);
++                    // DinoTale "Texture Filtering: Sharp": sample the textures of 2D drawing (rectangles: sprites, the HUD,
++                    // background layers) without filtering (G_TF_POINT). 3D geometry keeps the game's filtering: its small
++                    // textures are stretched over large areas to be smoothed into gradients (the title screen's backdrop),
++                    // and point sampled they're large blocks. So does a rectangle that stretches its texture more than twice
++                    // (texel steps below 512 in s5.10), like the chalkboards' green.
++                    if (getSharpTextures() && (proj.type == Projection::Type::Rectangle)) {
++                        const bool enlarged = (std::abs(callDesc.rectDsdx) < 512) || (std::abs(callDesc.rectDtdy) < 512);
++                        if (!enlarged) {
++                            shaderDesc.otherMode.H &= ~(3U << G_MDSFT_TEXTFILT);
++                        }
 +                    }
 +
                      // Check if the blender uses a standard fog cycle. We override it and indicate it on

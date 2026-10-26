@@ -54,7 +54,8 @@ void dinotale_add_display_options(recomp::config::Config &config) {
         texture_filter_option,
         "Texture Filtering",
         "<recomp-color primary>Smooth</recomp-color> is the game's own filtering. "
-        "<recomp-color primary>Sharp</recomp-color> draws every texture (Yoshi, enemies, the HUD, backgrounds) with sharp pixels.",
+        "<recomp-color primary>Sharp</recomp-color> draws the sprites, HUD and backgrounds with sharp pixels; "
+        "3D scenery keeps its smoothing.",
         texture_filter_options,
         0
     );

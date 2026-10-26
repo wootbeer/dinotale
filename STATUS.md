@@ -21,6 +21,13 @@ and Punishment's port has separate Texture and HUD Filtering, made by
 rewriting the game's display lists). Checked at 3x in 1-1: Sharp draws each
 texel as a hard block.
 
+**Round 51b:** the title screen's backdrop turned into large blocks: a small
+texture on 3D geometry, stretched over a big area to be smoothed into a
+gradient. Sharp now applies to rectangles only (sprites, the HUD, background
+layers: everything 2D), and not to a rectangle that stretches its texture
+more than twice (the chalkboards' green). 3D geometry keeps the game's
+filtering. Checked at 3x: the title backdrop is smooth, 1-1's apple sharp.
+
 ## Round 50: a third of the screen black after a page turn in 4-1 (Expand)
 
 **Found** while getting to 4-1's first treehouse: after the page turn into the
