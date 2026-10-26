@@ -6,6 +6,25 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Open: 4-1's blue blocks (issue #28)
+
+**Report:** in 4-1's treehouses (the long row near the end) the blue blocks
+wiggle as Yoshi walks and vanish at the edge of the 4:3 area in Expand.
+
+**From the reporter's clip:** the blocks move in whole N64 pixels (4.25 and
+8.5 px per frame at 1080p) while the wall behind moves in quarter pixels (3.25,
+6.75): the same sprite-vs-background mismatch as #16, parked with it. The
+rightmost block vanishes when its centre passes about x = 368 (320 + 48) in the
+320-wide view's coordinates, before the wider view's edge (~373).
+
+**Not yet found:** the check. Not the shared test (func_800591EC, already
+widened), nor func_80022448 (which tests -48 < x < 368, but only to smash the
+blocks on screen), nor the model draw functions' depth test (func_8005DCB4).
+Candidates left: direct screen-x tests in overlays (func_8041F6BC,
+func_8041F804, func_806AE81C, func_8059FFE0, func_80409618) and a float test in
+an overlay. Needs the blocks on screen to see which runs; the treehouses are
+far into the level.
+
 ## Round 49: stilts still missing in the left strip (issue #19)
 
 **Report:** after Round 41 the stilts show in the right strip but not the left.
