@@ -6,6 +6,21 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 51: Texture Filtering setting (issue #29)
+
+**Request:** an option to turn off texture filtering everywhere, for sharp
+pixels (Yoshi, the HUD and the rest look smeared).
+
+**Change:** Settings > Graphics > Texture Filtering: Smooth (the game's own
+filtering, default) or Sharp. Sharp clears the texture filter bits
+(othermode bits 12-13, G_TF_POINT) in each draw's shader description in RT64
+(`rt64/0024`), so every texture is point-sampled whatever filter the game
+sets; the game's own state is untouched. One setting for everything: the game
+is nearly all sprites, so there's no clean split between world and HUD (Sin
+and Punishment's port has separate Texture and HUD Filtering, made by
+rewriting the game's display lists). Checked at 3x in 1-1: Sharp draws each
+texel as a hard block.
+
 ## Round 50: a third of the screen black after a page turn in 4-1 (Expand)
 
 **Found** while getting to 4-1's first treehouse: after the page turn into the

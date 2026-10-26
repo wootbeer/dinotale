@@ -58,7 +58,7 @@ extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
 // relocatable overlays.
 void register_dinotale_overlays();
 
-// display_options.cpp: Settings > Graphics > Screen Filter, Hybrid Dimming.
+// display_options.cpp: Settings > Graphics > Screen Filter, Texture Filtering, Hybrid Dimming.
 void dinotale_add_display_options(recomp::config::Config &config);
 void dinotale_update_display_options();
 

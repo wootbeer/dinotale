@@ -1,0 +1,56 @@
+diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
+--- a/src/hle/rt64_state.cpp
++++ b/src/hle/rt64_state.cpp
+@@ -19,6 +19,7 @@
+ #include "preset/rt64_preset_light.h"
+ 
+ #include "rt64_application.h"
++#include "render/rt64_screen_filter.h"
+ #include "rt64_interpreter.h"
+ 
+ //#define ASSERT_ON_BLENDER_EMULATION
+@@ -991,6 +992,11 @@
+                     shaderDesc.otherMode = callDesc.otherMode;
+                     shaderDesc.flags = {};
+ 
++                    // DinoTale "Texture Filtering: Sharp": sample the textures without filtering (G_TF_POINT).
++                    if (getSharpTextures()) {
++                        shaderDesc.otherMode.H &= ~(3U << G_MDSFT_TEXTFILT);
++                    }
++
+                     // Check if the blender uses a standard fog cycle. We override it and indicate it on
+                     // the material for the RT path to use its own fog handling.
+                     interop::Blender::EmulationRequirements blenderEmuReqs = interop::Blender::checkEmulationRequirements(callDesc.otherMode);
+diff --git a/src/render/rt64_screen_filter.h b/src/render/rt64_screen_filter.h
+--- a/src/render/rt64_screen_filter.h
++++ b/src/render/rt64_screen_filter.h
+@@ -26,4 +26,9 @@
+     // (black) to 1 (not dimmed). Safe to set from any thread.
+     void setHybridSideBrightness(float brightness);
+     float getHybridSideBrightness();
++
++    // DinoTale "Texture Filtering: Sharp": textures are sampled without filtering (point sampling), whatever
++    // filter the game sets. Safe to set from any thread.
++    void setSharpTextures(bool sharp);
++    bool getSharpTextures();
+ };
+diff --git a/src/render/rt64_vi_renderer.cpp b/src/render/rt64_vi_renderer.cpp
+--- a/src/render/rt64_vi_renderer.cpp
++++ b/src/render/rt64_vi_renderer.cpp
+@@ -36,6 +36,16 @@
+         return hybridSideBrightness.load(std::memory_order_relaxed);
+     }
+ 
++    static std::atomic<bool> sharpTextures{ false };
++
++    void setSharpTextures(bool sharp) {
++        sharpTextures.store(sharp, std::memory_order_relaxed);
++    }
++
++    bool getSharpTextures() {
++        return sharpTextures.load(std::memory_order_relaxed);
++    }
++
+     // VIRenderer
+ 
+     VIRenderer::VIRenderer() { }

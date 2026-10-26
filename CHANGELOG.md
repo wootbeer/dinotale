@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- New setting, Graphics > Texture Filtering: Sharp draws every texture with
+  sharp pixels instead of the game's smooth filtering.
 - Expand: after the page turn into 4-1's second area (and other areas whose
   view starts left of the layer's edge), the left of the screen is no longer
   black.

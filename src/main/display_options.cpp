@@ -2,6 +2,7 @@
 // (render/rt64_screen_filter.h):
 // - Screen Filter: post-process filters for the final picture (rt64/0017).
 // - Hybrid Dimming: how dark Hybrid's stretched sides are (rt64/0015, 0018).
+// - Texture Filtering: Sharp samples textures without filtering (rt64/0024).
 
 #include <string>
 #include <variant>
@@ -15,6 +16,7 @@
 namespace {
     const std::string screen_filter_option = "screen_filter";
     const std::string hybrid_dimming_option = "hybrid_dimming";
+    const std::string texture_filter_option = "texture_filter";
     // Percent the sides are darkened by; the default was chosen by eye.
     constexpr double default_hybrid_dimming = 88.0;
 
@@ -26,6 +28,11 @@ namespace {
         {RT64::ScreenFilter::XBR, "xBR", "xBR"},
         {RT64::ScreenFilter::XBRZ, "xBRZ", "xBRZ"},
         {RT64::ScreenFilter::HQ2x, "HQ2x", "HQ2x"},
+    };
+
+    const std::vector<recomp::config::ConfigOptionEnumOption> texture_filter_options = {
+        {0, "Smooth", "Smooth"},
+        {1, "Sharp", "Sharp"},
     };
 }
 
@@ -41,6 +48,15 @@ void dinotale_add_display_options(recomp::config::Config &config) {
         "pixel-art upscalers that smooth the edges of the game's 240p picture.",
         screen_filter_options,
         RT64::ScreenFilter::None
+    );
+
+    config.add_enum_option(
+        texture_filter_option,
+        "Texture Filtering",
+        "<recomp-color primary>Smooth</recomp-color> is the game's own filtering. "
+        "<recomp-color primary>Sharp</recomp-color> draws every texture (Yoshi, enemies, the HUD, backgrounds) with sharp pixels.",
+        texture_filter_options,
+        0
     );
 
     config.add_percent_number_option(
@@ -66,6 +82,11 @@ void dinotale_update_display_options() {
     const auto filter = config.get_option_value(screen_filter_option);
     if (const uint32_t* value = std::get_if<uint32_t>(&filter)) {
         RT64::setScreenFilter(RT64::ScreenFilter(*value));
+    }
+
+    const auto texture_filter = config.get_option_value(texture_filter_option);
+    if (const uint32_t* value = std::get_if<uint32_t>(&texture_filter)) {
+        RT64::setSharpTextures(*value == 1);
     }
 
     const auto dimming = config.get_option_value(hybrid_dimming_option);
