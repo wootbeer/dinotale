@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Expand: after the page turn into 4-1's second area (and other areas whose
+  view starts left of the layer's edge), the left of the screen is no longer
+  black.
+
 ## 0.1.6
 
 - Expand: 5-4's stilt Shy Guys keep their stilts at the left edge of the

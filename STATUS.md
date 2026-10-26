@@ -6,6 +6,21 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 50: a third of the screen black after a page turn in 4-1 (Expand)
+
+**Found** while getting to 4-1's first treehouse: after the page turn into the
+second area, the left third of the screen was black in Expand, Yoshi walking
+on nothing; in Original the same spot shows the wall, a tree and the walkway.
+
+**Cause:** `dinotale_bg_cover_outside` (Round 12's cover for the junk left of
+a layer's art at a level's start) covered every column left of the layer's
+x 0. In this area the N64's own 320-wide view starts about 110 px left of the
+layer's x 0 and the game has art there, so the cover blacked it out.
+
+**Fix:** cover only while the 320-wide view starts at or right of the layer's
+x 0, the level-start case the cover is for. (Expand still shows black in the
+extra strip left of a level's or area's start: no art there, issue #26.)
+
 ## Open: 4-1's blue blocks (issue #28)
 
 **Report:** in 4-1's treehouses (the long row near the end) the blue blocks
@@ -20,10 +35,11 @@ rightmost block vanishes when its centre passes about x = 368 (320 + 48) in the
 **Not yet found:** the check. Not the shared test (func_800591EC, already
 widened), nor func_80022448 (which tests -48 < x < 368, but only to smash the
 blocks on screen), nor the model draw functions' depth test (func_8005DCB4).
-Candidates left: direct screen-x tests in overlays (func_8041F6BC,
-func_8041F804, func_806AE81C, func_8059FFE0, func_80409618) and a float test in
-an overlay. Needs the blocks on screen to see which runs; the treehouses are
-far into the level.
+With blocks on screen (4-1's first treehouse: right, up the ramp, through
+the page turn, up the short stairs) none of those candidates runs except
+func_800692D4 (0 <= x <= 320, 0 <= y <= 240), and that's for the spring Shy
+Guys, not the blocks. The draw cull (func_8005F700) sees dozens of actors around
+the blocks; which are the blocks, and what drops them, is still to find.
 
 ## Round 49: stilts still missing in the left strip (issue #19)
 

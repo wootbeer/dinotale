@@ -320,10 +320,15 @@ extern "C" void dinotale_bg_cover_outside(uint8_t* rdram, uint32_t rt, uint32_t 
         return;
     }
 
+    // Only where the 320-wide view itself starts at or right of the layer's left
+    // end: left of that the game streams art for the N64's own view (4-1's
+    // second area starts its view 110 px left of the layer's x 0, with art
+    // there), and covering it blacked out a third of the screen.
     int32_t columns = 0;
     if (current_view_width() != original_view_width) {
         const float left = *reinterpret_cast<float*>(&word(obj + 0x18));
-        if (left < 0.0f) {
+        const float extra = float(current_view_width() - original_view_width) / 2.0f;
+        if ((left < 0.0f) && (left + extra >= 0.0f)) {
             columns = std::min(int32_t(std::ceil(-left)), current_view_width());
         }
     }
