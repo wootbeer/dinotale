@@ -38,7 +38,13 @@ function Step($text) { Write-Host "`n== $text" -ForegroundColor Cyan }
 # --- Visual Studio x64 environment ---------------------------------------
 $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $vswhere)) { throw "Visual Studio not found (no vswhere.exe) -- see BUILDING.md." }
-$vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+# Prefer an install that has both the C++ tools and the Clang compiler, so a
+# newer install without Clang (another edition, or one an update changed)
+# doesn't hide one that has it.
+$vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 Microsoft.VisualStudio.Component.VC.Llvm.Clang -property installationPath
+if (-not $vsPath) {
+    $vsPath = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+}
 if (-not $vsPath) { throw "No Visual Studio install with the C++ tools found -- see BUILDING.md." }
 if ($env:VSCMD_ARG_TGT_ARCH -ne "x64") {
     & (Join-Path $vsPath "Common7\Tools\Launch-VsDevShell.ps1") -Arch amd64 -HostArch amd64 -SkipAutomaticLocation | Out-Null
@@ -47,7 +53,8 @@ if ($env:VSCMD_ARG_TGT_ARCH -ne "x64") {
 $llvmBin = Join-Path $vsPath "VC\Tools\Llvm\x64\bin"
 $clangCl = Join-Path $llvmBin "clang-cl.exe"
 if (-not (Test-Path $clangCl)) {
-    throw "clang-cl not found at $clangCl -- install the 'C++ Clang Compiler for Windows' component (BUILDING.md)."
+    throw ("clang-cl not found at $clangCl -- in the Visual Studio Installer, Modify this install ($vsPath) and, " +
+        "under Individual components, tick 'C++ Clang Compiler for Windows' and 'MSBuild support for LLVM (clang-cl) toolset' (BUILDING.md).")
 }
 # Make sure the 64-bit clang-cl is the one found by name (the presets use it).
 $env:PATH = "$llvmBin;$env:PATH"
