@@ -33,6 +33,13 @@ On first launch, pick your copy of the game. It's checked against the hash
 below and never modified. Settings (graphics, controls, sound) are in the
 in-game menu.
 
+### Portable mode
+
+Settings, saves and mods normally go in `%LOCALAPPDATA%\dinotale` (Windows)
+or `~/.config/dinotale` (Linux). Add a blank `portable.txt` next to
+`DinoTale.exe` (or `DinoTale`) to keep them in the game's own folder instead,
+for example on a USB stick. Copy existing settings and saves over by hand.
+
 ### Game files
 
 Yoshi's Story (USA) (En,Ja). Any byte order (`.z64`, `.n64`, `.v64`) works,
