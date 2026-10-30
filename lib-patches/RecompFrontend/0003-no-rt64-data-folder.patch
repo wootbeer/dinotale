@@ -1,0 +1,14 @@
+diff --git a/recompui/src/renderer/rt64_render_context.cpp b/recompui/src/renderer/rt64_render_context.cpp
+--- a/recompui/src/renderer/rt64_render_context.cpp
++++ b/recompui/src/renderer/rt64_render_context.cpp
+@@ -284,6 +284,10 @@
+     // Set up the RT64 application configuration fields.
+     RT64::ApplicationConfiguration appConfig;
+     appConfig.useConfigurationFile = false;
++    // DinoTale: no RT64 data folder (AppData\Local\rt64, ~/.config/.rt64). RT64 keeps only its own config file
++    // (off), log (not in release builds), game scripts and the debugger's layout there, none of which are used,
++    // but it created the folder anyway, outside the game's folder even in portable mode.
++    appConfig.detectDataPath = false;
+ 
+     // Create the RT64 application.
+     app = std::make_unique<RT64::Application>(appCore, appConfig);

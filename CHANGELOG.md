@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- No more empty `rt64` folder in AppData\Local (Windows) or `.rt64` in
+  ~/.config (Linux): the renderer kept nothing there, and in portable mode
+  everything now stays in the game's folder.
+
 ## 0.1.7
 
 - New setting, Graphics > Texture Filtering: Sharp draws sprites, the HUD and
