@@ -65,6 +65,12 @@ namespace LSFG_3_1P::Shaders {
         std::array<std::array<Core::Image, 2>, 3> inImgs1;
         Core::Image inImg2;
         std::optional<Core::Image> optImg;
+        /// Stands in for absent optional images (the first pass has no level
+        /// before it): Vulkan wants a valid image in every binding the shader
+        /// declares; the shader leaves it unused (firstIter), and it reads as
+        /// zero, as Direct3D's null view does. (BattleTanx GA port.)
+        std::optional<Core::Image> blank;
+        bool blankCleared{false};
         std::array<Core::Image, 3> tempImgs1;
         std::array<Core::Image, 2> tempImgs2;
         Core::Image outImg;

@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Lossless Scaling frame generation: a Vulkan correctness fix (from
+  BattleTanx: Global Assault Recompiled), so it doesn't rely on the graphics
+  driver accepting empty shader inputs. The generated frames are the same.
+
 ## 0.1.8
 
 - New setting, Graphics > Frame Generation: Lossless Scaling's frame

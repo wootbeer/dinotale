@@ -6,6 +6,25 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 53: lib/lsfg Vulkan correctness fix (from btgarecomp round 187)
+
+**From:** BattleTanx: Global Assault Recompiled, commit 501cdcc ("lsfg: valid
+images in every binding, and a legal thumbnail view"), found by Concept of
+Love running lib/lsfg under Vulkan's validation layer.
+
+**What:** Gamma's and Delta's first pass (v3.1 and v3.1p) left its optional
+sampled-image inputs as null views, which needs a feature Vulkan drivers
+don't have to offer; each now binds a blank image of its own size, cleared to
+zero on its first dispatch (`LSFG::Utils::clearImage`). The scene-cut
+thumbnail image also gets sampled usage, since it has an image view. The
+generated frames are unchanged.
+
+**Applied:** the commit's lib/lsfg changes (not its STATUS); lib/lsfg is now
+identical to btgarecomp's at 501cdcc (it was identical to the commit's
+parent). lsfg_test with the player's DLL, quality and performance: every
+generated frame puts the square within half a pixel of halfway, as before.
+DinoTale runs through frame generation without errors.
+
 ## Round 52: Lossless Scaling frame generation
 
 **Request:** an alternative to RT64's frame interpolation (kept, to work on):

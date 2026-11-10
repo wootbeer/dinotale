@@ -101,6 +101,10 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
         { extent.width, extent.height },
         VK_FORMAT_R16G16B16A16_SFLOAT);
 
+    if (!this->optImg1 || !this->optImg2 || !this->optImg3)
+        this->blank = Core::Image(vk.device, extent, VK_FORMAT_R16G16B16A16_SFLOAT,
+            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT);
+
     // hook up shaders
     for (size_t pass_idx = 0; pass_idx < vk.generationCount; pass_idx++) {
         auto& pass = this->passes.emplace_back();
@@ -116,7 +120,7 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
                 .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(2))
                 .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->inImgs1.at((i + 2) % 3))
                 .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->inImgs1.at(i % 3))
-                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1)
+                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1 ? *this->optImg1 : *this->blank)
                 .add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, this->tempImgs1)
                 .build();
         }
@@ -150,7 +154,7 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
             .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(0))
             .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(2))
             .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->tempImgs2)
-            .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1)
+            .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1 ? *this->optImg1 : *this->blank)
             .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->inImg2)
             .add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, this->outImg1)
             .build();
@@ -163,8 +167,8 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
                 .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(2))
                 .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->inImgs1.at((i + 2) % 3))
                 .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->inImgs1.at(i % 3))
-                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1)
-                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg2)
+                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg1 ? *this->optImg1 : *this->blank)
+                .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg2 ? *this->optImg2 : *this->blank)
                 .add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, this->tempImgs2.at(0))
                 .build();
         }
@@ -196,7 +200,7 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
             .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(0))
             .add(VK_DESCRIPTOR_TYPE_SAMPLER, this->samplers.at(2))
             .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->tempImgs1.at(0))
-            .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg3)
+            .add(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, this->optImg3 ? *this->optImg3 : *this->blank)
             .add(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, this->outImg2)
             .build();
     }
@@ -204,6 +208,10 @@ Delta::Delta(Vulkan& vk, std::array<std::array<Core::Image, 2>, 3> inImgs1,
 
 void Delta::Dispatch(const Core::CommandBuffer& buf, uint64_t frameCount, uint64_t pass_idx) {
     auto& pass = this->passes.at(pass_idx);
+    if (this->blank && !this->blankCleared) {
+        Utils::clearImage(buf, *this->blank);
+        this->blankCleared = true;
+    }
 
     // first shader
     const auto extent = this->tempImgs1.at(0).getExtent();

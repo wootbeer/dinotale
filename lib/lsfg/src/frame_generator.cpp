@@ -168,7 +168,8 @@ namespace lsfg {
             // Scene cut detection: the thumbnail and a mapped buffer to read it back.
             impl->device = device;
             impl->thumbnail = LSFG::Core::Image(core_device, { kThumbWidth, kThumbHeight }, kFormat,
-                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT, VK_IMAGE_ASPECT_COLOR_BIT);
+                VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                VK_IMAGE_ASPECT_COLOR_BIT);     // sampled: every Core::Image gets a view
             const VkBufferCreateInfo buffer_info{
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .size = VkDeviceSize(kThumbWidth) * kThumbHeight * 4,

@@ -23,6 +23,11 @@ namespace LSFG::Utils {
     /// (BattleTanx GA port: plain vkCmdPipelineBarrier, so the host device
     /// needn't enable synchronization2.)
     ///
+    /// Records clearing a new image to zero and readying it for compute
+    /// reads (GENERAL). (BattleTanx GA port: the stand-in
+    /// for an absent optional image, see Gamma's and Delta's "blank".)
+    void clearImage(const Core::CommandBuffer& buffer, Core::Image& image);
+
     class BarrierBuilder {
     public:
         BarrierBuilder(const Core::CommandBuffer& buffer)
