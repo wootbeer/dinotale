@@ -6,6 +6,22 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 54: do the game threads spin while waiting? (no)
+
+**Question:** in BattleTanx: Global Assault Recompiled (round 188) the main
+game thread used ~93% of a core at all times, title screen included: a
+polling loop calling a yield hook (dequeue_external_messages and an
+osSetThreadPri hand-off) back to back. Does DinoTale have the same?
+
+**Measured** (top -H, 5 s samples, frame generation off): on the intro, the
+title screen, the main menu and standing still in 1-1, every "Game N"
+thread is at 0.4% or less, and none had used a second of CPU in about
+three minutes of running. (The busy threads in the sandbox are llvmpipe, its
+software GPU.) DinoTale has no yield hook of that kind: no
+dequeue_external_messages, osSetThreadPri or osYieldThread hook in
+yoshisstory.us.toml or src/. The game's threads wait on message queues,
+which the runtime turns into real sleeps. Nothing to change.
+
 ## Round 53: lib/lsfg Vulkan correctness fix (from btgarecomp round 187)
 
 **From:** BattleTanx: Global Assault Recompiled, commit 501cdcc ("lsfg: valid
