@@ -43,6 +43,8 @@ bld/
 [Bb]in/
 [Oo]bj/
 [Ll]og/
+# ...except lib/lsfg's DXVK logger, which is source.
+!lib/lsfg/dxbc/util/log/
 [Ll]ogs/
 out/
 .vs/
