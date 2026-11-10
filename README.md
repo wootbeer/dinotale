@@ -59,6 +59,19 @@ Settings > Graphics > Aspect Ratio:
   before starting a level. HUD Placement sets whether the HUD moves out to
   the window edges.
 
+### Lossless Scaling frame generation
+
+Settings > Graphics > Frame Generation can use
+[Lossless Scaling](https://store.steampowered.com/app/993090/Lossless_Scaling/)'s
+frame generation (LSFG 3.1) instead of RT64's own, built in, with no
+separate app running. It needs your own copy of Lossless Scaling's
+`Lossless.dll`, from its install folder: press **Load Lossless.dll** and pick
+it (it's copied into DinoTale's folder; nothing from Lossless Scaling comes
+with DinoTale). Then set Frame Generation to **Lossless Scaling** and restart:
+it runs on the Vulkan graphics API, which it switches to. Multiplier sets 2x,
+3x or 4x the game's frame rate; Performance mode is lighter on the GPU. It
+adds about one game frame of input delay. Windows and Linux.
+
 ## Reporting issues
 
 Found something wrong? Open an

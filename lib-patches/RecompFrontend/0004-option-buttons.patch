@@ -1,0 +1,75 @@
+diff --git a/recompui/include/recompui/config.h b/recompui/include/recompui/config.h
+--- a/recompui/include/recompui/config.h
++++ b/recompui/include/recompui/config.h
+@@ -2,6 +2,8 @@
+ #define _RECOMP_UI_CONFIG_H_
+ 
+ #include <vector>
++#include <functional>
++#include <string>
+ 
+ #include "librecomp/config.hpp"
+ #include "elements/ui_modal.h"
+@@ -160,6 +162,15 @@
+         recomp::config::Config &get_graphics_config();
+         recomp::config::Config &get_sound_config();
+ 
++        // A button shown under an option (by its id) on its options page;
++        // `callback` runs when it's pressed (on the UI thread).
++        void add_option_button(const std::string &option_id, const std::string &label, std::function<void()> callback);
++        struct OptionButton {
++            std::string label;
++            std::function<void()> callback;
++        };
++        const OptionButton *get_option_button(const std::string &option_id);
++
+         // Internal use only.
+         void init_modal();
+     }
+diff --git a/recompui/src/config/ui_config.cpp b/recompui/src/config/ui_config.cpp
+--- a/recompui/src/config/ui_config.cpp
++++ b/recompui/src/config/ui_config.cpp
+@@ -32,6 +32,17 @@
+         throw std::runtime_error("Could not find config with ID '" + id + "'.");
+     }
+ 
++    static std::unordered_map<std::string, config::OptionButton> option_buttons;
++
++    void config::add_option_button(const std::string &option_id, const std::string &label, std::function<void()> callback) {
++        option_buttons[option_id] = config::OptionButton{ label, std::move(callback) };
++    }
++
++    const config::OptionButton *config::get_option_button(const std::string &option_id) {
++        auto it = option_buttons.find(option_id);
++        return it != option_buttons.end() ? &it->second : nullptr;
++    }
++
+     static recomp::config::Config *get_config_ptr(const std::string &id) {
+         for (auto &[config_id, config] : configs) {
+             if (config_id == id) {
+diff --git a/recompui/src/config/ui_config_page_options_menu.cpp b/recompui/src/config/ui_config_page_options_menu.cpp
+--- a/recompui/src/config/ui_config_page_options_menu.cpp
++++ b/recompui/src/config/ui_config_page_options_menu.cpp
+@@ -1,5 +1,6 @@
+ #include "ui_config_page_options_menu.h"
+ #include "recompui/config.h"
++#include "elements/ui_button.h"
+ 
+ 
+ namespace recompui {
+@@ -259,6 +260,15 @@
+             element->update_disabled();
+             element->update_hidden();
+             config_option_elements.push_back(element);
++
++            // A button added for this option (config::add_option_button).
++            if (const config::OptionButton *option_button = recompui::config::get_option_button(config_option.id)) {
++                Button *button = context.create_element<Button>(body_left_scroll, option_button->label, ButtonStyle::Secondary, ButtonSize::Small);
++                button->set_width(240.0f);
++                button->set_margin_bottom(16.0f);
++                std::function<void()> callback = option_button->callback;
++                button->add_pressed_callback([callback]() { callback(); });
++            }
+         }
+     }
+ }

@@ -10,8 +10,15 @@
 # reverse-applies cleanly and would look unapplied.
 find_package(Git REQUIRED)
 
+# The submodule is lib/<submodule> unless a folder (relative to the repo root)
+# is given, as for plume, a submodule inside rt64.
 function(dinotale_apply_lib_patches submodule)
-    set(dir "${CMAKE_SOURCE_DIR}/lib/${submodule}")
+    if (ARGC GREATER 1)
+        set(rel "${ARGV1}")
+    else()
+        set(rel "lib/${submodule}")
+    endif()
+    set(dir "${CMAKE_SOURCE_DIR}/${rel}")
     file(GLOB patches "${CMAKE_SOURCE_DIR}/lib-patches/${submodule}/*.patch")
     list(SORT patches)
 
@@ -28,7 +35,7 @@ function(dinotale_apply_lib_patches submodule)
         OUTPUT_VARIABLE git_dir OUTPUT_STRIP_TRAILING_WHITESPACE
         RESULT_VARIABLE result)
     if (NOT result EQUAL 0)
-        message(FATAL_ERROR "lib/${submodule} isn't a git checkout; run: git submodule update --init --recursive")
+        message(FATAL_ERROR "${rel} isn't a git checkout; run: git submodule update --init --recursive")
     endif()
     set(stamp "${git_dir}/dinotale-patches")
 
@@ -46,7 +53,7 @@ function(dinotale_apply_lib_patches submodule)
         WORKING_DIRECTORY "${dir}"
         RESULT_VARIABLE result ERROR_VARIABLE error)
     if (NOT result EQUAL 0)
-        message(FATAL_ERROR "Couldn't reset lib/${submodule}:\n${error}")
+        message(FATAL_ERROR "Couldn't reset ${rel}:\n${error}")
     endif()
     # Files the patches add aren't tracked, so the checkout above leaves them;
     # remove them so the patch adding each one applies again.
@@ -65,9 +72,9 @@ function(dinotale_apply_lib_patches submodule)
             RESULT_VARIABLE result ERROR_VARIABLE error)
         if (NOT result EQUAL 0)
             file(REMOVE "${stamp}")
-            message(FATAL_ERROR "Couldn't apply ${patch} to lib/${submodule}:\n${error}")
+            message(FATAL_ERROR "Couldn't apply ${patch} to ${rel}:\n${error}")
         endif()
-        message(STATUS "Applied ${patch} to lib/${submodule}")
+        message(STATUS "Applied ${patch} to ${rel}")
     endforeach()
     file(WRITE "${stamp}" "${series_hash}\n")
 endfunction()

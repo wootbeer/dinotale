@@ -60,6 +60,8 @@ void register_dinotale_overlays();
 
 // display_options.cpp: Settings > Graphics > Screen Filter, Texture Filtering, Hybrid Dimming.
 void dinotale_add_display_options(recomp::config::Config &config);
+// frame_generation_config.cpp: Settings > Graphics > Frame Generation (Lossless Scaling).
+void dinotale_add_frame_generation_options(recomp::config::Config &graphics);
 void dinotale_update_display_options();
 
 // rom_archive.cpp: the game's ROM from a .zip or .7z, or nothing.
@@ -445,7 +447,9 @@ int main(int argc, char** argv) {
     // created and finalized here, before recomp::start().
     recompui::config::GeneralTabOptions general_tab_options{};
     recompui::config::create_general_tab(general_tab_options);
-    dinotale_add_display_options(recompui::config::create_graphics_tab());
+    recomp::config::Config &graphics_tab = recompui::config::create_graphics_tab();
+    dinotale_add_display_options(graphics_tab);
+    dinotale_add_frame_generation_options(graphics_tab);
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();

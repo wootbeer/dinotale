@@ -6,6 +6,37 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 52: Lossless Scaling frame generation
+
+**Request:** an alternative to RT64's frame interpolation (kept, to work on):
+Lossless Scaling's frame generation through the player's own Lossless.dll, as
+BattleTanx: Global Assault Recompiled has it, with the same settings.
+
+**Change:** btgarecomp's library, `lib/lsfg` (lsfg-vk's frame generation
+passes and DXVK's shader compiler, made to run inside RT64; see its README),
+copied as it is, with:
+- `rt64/0025`: the present queue sends each new game frame through it
+  (btgarecomp's 0022, without its bloom, and passing DinoTale's Stretch and
+  Hybrid dimming to the VI renderer like the normal path).
+- `plume/0001`: plume's Vulkan device enables the Vulkan memory model. The
+  patch script takes a folder now (`dinotale_apply_lib_patches(plume
+  lib/rt64/src/contrib/plume)`), plume being a submodule inside rt64.
+- `RecompFrontend/0004`: buttons under options (btgarecomp's 0014), for Load
+  Lossless.dll.
+- `src/main/frame_generation_config.cpp` (btgarecomp's): Settings > Graphics
+  > Frame Generation (RT64 / Lossless Scaling), Lossless Scaling Multiplier
+  (2x-4x), Mode (Quality / Performance), Load Lossless.dll (copies it to
+  lossless_scaling/ in the app folder and translates its shaders once).
+  Choosing Lossless Scaling sets Vulkan and the Original framerate.
+- License notices for lsfg-vk, DXVK and SPIRV-Headers in both packages.
+
+**Checked here** (software Vulkan, no GPU): the options show and save;
+without a DLL the game presents normally and logs "Load Lossless.dll first";
+with one, the shaders translate (shaders.bin) and every game frame goes
+through the generator, the game drawing correctly (slowly: the generator runs
+on the CPU here); lsfg_test with the DLL puts the generated square exactly
+halfway. Not checked: speed and look on a real GPU.
+
 ## Round 51: Texture Filtering setting (issue #29)
 
 **Request:** an option to turn off texture filtering everywhere, for sharp

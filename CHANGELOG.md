@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- New setting, Graphics > Frame Generation: Lossless Scaling's frame
+  generation (LSFG 3.1), built in, with your own Lossless.dll (Load
+  Lossless.dll). 2x, 3x or 4x the frame rate, Quality or Performance. Needs
+  Vulkan, which choosing it switches to. RT64's own interpolation stays the
+  default.
 - No more empty `rt64` folder in AppData\Local (Windows) or `.rt64` in
   ~/.config (Linux): the renderer kept nothing there, and in portable mode
   everything now stays in the game's folder.

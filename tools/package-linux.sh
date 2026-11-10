@@ -68,6 +68,9 @@ GamepadMotionHelpers=lib/RecompFrontend/lib/GamepadMotionHelpers/LICENSE
 SlotMap=lib/RecompFrontend/lib/SlotMap/slot_map.h
 LZMA-SDK=thirdparty/lzma-sdk/lzma-sdk.txt
 screen-filters=licenses/screen-filters.txt
+lsfg-vk=lib/lsfg/LICENSE-lsfg-vk.md
+DXVK=lib/lsfg/LICENSE-dxvk.txt
+SPIRV-Headers=lib/rt64/src/contrib/re-spirv/external/SPIRV-Headers/LICENSE
 EOF
 
 tar -C dist -czf "dist/$name.tar.gz" "$name"

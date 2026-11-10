@@ -1,0 +1,44 @@
+--- a/plume_vulkan.cpp
++++ b/plume_vulkan.cpp
+@@ -3898,6 +3898,15 @@
+             featuresChain = &robustnessFeatures;
+         }
+ 
++        // Core in Vulkan 1.2.
++        VkPhysicalDeviceVulkanMemoryModelFeatures memoryModelFeatures = {};
++        const bool memoryModelFound = (physicalDeviceProperties.apiVersion >= VK_API_VERSION_1_2);
++        if (memoryModelFound) {
++            memoryModelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES;
++            memoryModelFeatures.pNext = featuresChain;
++            featuresChain = &memoryModelFeatures;
++        }
++
+         VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {};
+         const bool bufferDeviceAddressFound = supportedOptionalExtensions.find(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME) != supportedOptionalExtensions.end();
+         if (bufferDeviceAddressFound) {
+@@ -3990,6 +3999,14 @@
+             createDeviceChain = &robustnessFeatures;
+         }
+ 
++        vulkanMemoryModelSupported = memoryModelFound && memoryModelFeatures.vulkanMemoryModel;
++        if (vulkanMemoryModelSupported) {
++            memoryModelFeatures.vulkanMemoryModelDeviceScope = VK_FALSE;
++            memoryModelFeatures.vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE;
++            memoryModelFeatures.pNext = createDeviceChain;
++            createDeviceChain = &memoryModelFeatures;
++        }
++
+         const bool bufferDeviceAddressSupported = bufferDeviceAddressFeatures.bufferDeviceAddress;
+         if (bufferDeviceAddressSupported) {
+             bufferDeviceAddressFeatures.pNext = createDeviceChain;
+--- a/plume_vulkan.h
++++ b/plume_vulkan.h
+@@ -417,6 +417,8 @@
+         std::unique_ptr<RenderBuffer> nullBuffer;
+         bool loadStoreOpNoneSupported = false;
+         bool nullDescriptorSupported = false;
++        // Enabled when supported, for shaders that need it (Lossless Scaling frame generation).
++        bool vulkanMemoryModelSupported = false;
+ 
+         VulkanDevice(VulkanInterface *renderInterface, const std::string &preferredDeviceName);
+         ~VulkanDevice() override;

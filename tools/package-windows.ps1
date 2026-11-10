@@ -67,6 +67,10 @@ $licenses = [ordered]@{
     "DirectXShaderCompiler" = "licenses\DirectXShaderCompiler.txt"
     "LZMA-SDK"              = "thirdparty\lzma-sdk\lzma-sdk.txt"
     "screen-filters"        = "licenses\screen-filters.txt"
+    # Lossless Scaling frame generation (lib\lsfg): lsfg-vk's passes, DXVK's shader compiler, SPIR-V headers.
+    "lsfg-vk"               = "lib\lsfg\LICENSE-lsfg-vk.md"
+    "DXVK"                  = "lib\lsfg\LICENSE-dxvk.txt"
+    "SPIRV-Headers"         = "lib\rt64\src\contrib\re-spirv\external\SPIRV-Headers\LICENSE"
 }
 foreach ($entry in $licenses.GetEnumerator()) {
     if (Test-Path $entry.Value) {
