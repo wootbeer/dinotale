@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.8
 
 - New setting, Graphics > Frame Generation: Lossless Scaling's frame
   generation (LSFG 3.1), built in, with your own Lossless.dll (Load
