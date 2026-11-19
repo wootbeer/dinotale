@@ -34,6 +34,7 @@
 #include "recompui/program_config.h"
 #include "recompui/renderer.h"
 #include "recompui/config.h"
+#include "dinotale_command_line.h"
 #include "util/file.h"
 
 #include "recompinput/input_state.h"
@@ -401,6 +402,15 @@ static void find_assets_folder() {
 
 int main(int argc, char** argv) {
     std::set_terminate(report_unhandled_exception_and_abort);
+
+    // Command-line options (command_line.cpp), read before the game moves to its own folder.
+    dinotale_attach_console(argc);
+    DinoTaleCommandLine command_line;
+    if (!dinotale_parse_command_line(argc, argv, command_line)) {
+        fflush(stdout);
+        return EXIT_SUCCESS;
+    }
+
     find_assets_folder();
 
     recomp::Version project_version{};
@@ -415,6 +425,8 @@ int main(int argc, char** argv) {
 
     recompui::programconfig::set_program_name(program_name);
     recompui::programconfig::set_program_id(program_id);
+    // A new install keeps its settings, saves and mods in the game's own folder.
+    dinotale_use_portable_mode_by_default();
 
     SDL_InitSubSystem(SDL_INIT_AUDIO);
     if (!open_audio_device(game_frequency)) {
@@ -454,6 +466,17 @@ int main(int argc, char** argv) {
     recompui::config::create_sound_tab();
     recompui::config::create_mods_tab();
     recompui::config::finalize();
+
+    // Settings and the ROM from the command line, now that the saved settings are loaded.
+    if (!dinotale_apply_command_line(command_line)) {
+        fflush(stdout);
+        std::_Exit(EXIT_SUCCESS);
+    }
+    // The runtime reads --game (from --play) and --game-mode itself.
+    std::vector<char *> runtime_argv = { argv[0] };
+    for (std::string &arg : command_line.runtime_args) {
+        runtime_argv.push_back(arg.data());
+    }
 
     recomp::rsp::callbacks_t rsp_callbacks{
         .get_rsp_microcode = get_rsp_microcode,
@@ -502,8 +525,8 @@ int main(int argc, char** argv) {
     // register_launcher_init_callback call here.
 
     recomp::start({
-        .argc = argc,
-        .argv = argv,
+        .argc = int(runtime_argv.size()),
+        .argv = runtime_argv.data(),
         .project_version = project_version,
         .window_handle = {}, // created by gfx_callbacks.create_window
         .rsp_callbacks = rsp_callbacks,

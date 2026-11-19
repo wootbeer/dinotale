@@ -1,0 +1,27 @@
+diff --git a/recompui/include/recompui/config.h b/recompui/include/recompui/config.h
+--- a/recompui/include/recompui/config.h
++++ b/recompui/include/recompui/config.h
+@@ -72,6 +72,9 @@
+             void set_expand_available(bool available);
+             void apply_pending_updates();
+             void toggle_fullscreen();
++            // DinoTale: hands the graphics tab's applied values to the renderer, as Apply does (for values
++            // set from the command line).
++            void apply_config();
+         }
+ 
+         namespace sound {
+diff --git a/recompui/src/config/ui_config_tab_graphics.cpp b/recompui/src/config/ui_config_tab_graphics.cpp
+--- a/recompui/src/config/ui_config_tab_graphics.cpp
++++ b/recompui/src/config/ui_config_tab_graphics.cpp
+@@ -252,6 +252,10 @@
+             config.update_option_description(graphics::options::rr_manual_value, framerate_text);
+         }
+ 
++        void graphics::apply_config() {
++            apply_graphics_config();
++        }
++
+         void graphics::toggle_fullscreen() {
+             auto current_wm = get_graphics_enum_value<ultramodern::renderer::WindowMode>(graphics::options::wm_option, OptionChangeContext::Temporary);
+             auto new_wm = current_wm == ultramodern::renderer::WindowMode::Windowed ? ultramodern::renderer::WindowMode::Fullscreen : ultramodern::renderer::WindowMode::Windowed;

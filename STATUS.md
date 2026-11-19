@@ -6,6 +6,40 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 55: portable by default, and command-line options
+
+**Request:** make portable mode the default, leaving installs that aren't
+portable as they are; command-line options for nearly every setting, going
+straight into the game and picking the ROM.
+
+**Portable** (`dinotale_use_portable_mode_by_default`, command_line.cpp):
+RecompFrontend uses the game's folder when `portable.txt` is in the working
+directory, else `%LOCALAPPDATA%\dinotale` / `~/.config/dinotale`. At start,
+with `portable.txt` next to the executable, the game moves to its folder (so
+it's found when started from elsewhere). Without it: if the usual folder
+exists and isn't empty, nothing changes; otherwise `portable.txt` is created
+next to the executable (if it can be written there) and the game moves to its
+folder. Not for Flatpak, macOS, or with APP_FOLDER_PATH set.
+
+**Command line** (command_line.cpp, `--help`): `--rom` (recomp::select_rom,
+archives too), `--play` (passes the runtime's `--game yoshisstory`), short
+names for the common settings, `--set <option>=<value>` for any option on the
+General, Graphics and Sound tabs, `--save-settings`, `--list-settings`.
+Settings are set after the saved ones load, the way Apply does it (graphics
+then handed to the renderer: `recompui::config::graphics::apply_config`,
+`RecompFrontend/0005`), for that run only unless saved. Enum values match a
+key, the name shown, or a key uniquely containing the text ("4x" for MSAA4X).
+On Windows (a GUI program in release) output goes to the console the game was
+started from; a bad `--rom` also shows a message box.
+
+**Checked** (Linux): --help; --list-settings; settings applied for the run and
+the files unchanged; --save-settings writes them; bad values and unknown
+options reported. A new install (empty home) started with --rom and --play:
+portable.txt and everything else in the game's folder, the launcher skipped,
+the title screen up. An existing install (~/.config/dinotale with a setting):
+that folder kept and its setting read, no portable.txt. Not built on Windows
+here (the console attach).
+
 ## Round 54: do the game threads spin while waiting? (no)
 
 **Question:** in BattleTanx: Global Assault Recompiled (round 188) the main

@@ -35,10 +35,35 @@ in-game menu.
 
 ### Portable mode
 
-Settings, saves and mods normally go in `%LOCALAPPDATA%\dinotale` (Windows)
-or `~/.config/dinotale` (Linux). Add a blank `portable.txt` next to
-`DinoTale.exe` (or `DinoTale`) to keep them in the game's own folder instead,
-for example on a USB stick. Copy existing settings and saves over by hand.
+Settings, saves and mods are kept in the game's own folder (`portable.txt`
+next to `DinoTale.exe` or `DinoTale` marks it), so the folder can go
+anywhere, a USB stick included. An install from before 0.1.9, which keeps
+them in `%LOCALAPPDATA%\dinotale` (Windows) or `~/.config/dinotale`
+(Linux), keeps using that: add a blank `portable.txt` to switch (and copy
+them over), or delete it to go back. If the game's folder can't be written
+to, the usual place is used.
+
+### Command line
+
+Most settings can be given on the command line, for a shortcut or a Steam
+launch option. They're used for that run, unless `--save-settings` is given
+too.
+
+```
+DinoTale --rom "Yoshi's Story.z64" --play --aspect expand --fullscreen
+```
+
+- `--rom <file>`: pick the ROM (also inside a `.zip` or `.7z`).
+- `--play`: skip the launcher and start the game.
+- `--fullscreen`, `--windowed`, `--resolution`, `--aspect`, `--hud`,
+  `--framerate`, `--fps`, `--msaa`, `--downsampling`, `--api`,
+  `--screen-filter`, `--texture-filtering`, `--hybrid-dimming`,
+  `--frame-generation`, `--lsfg-multiplier`, `--lsfg-mode`, `--volume`,
+  `--rumble`, `--deadzone`, `--background-input`: the settings of those
+  names, for example `--screen-filter crt` or `--volume 50`.
+- `--set <option>=<value>`: any setting, by its name in the settings files.
+- `--list-settings` lists every setting with its value and choices; `--help`
+  lists the options.
 
 ### Game files
 

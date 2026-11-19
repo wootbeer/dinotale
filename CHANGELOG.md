@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Portable by default: a new install keeps its settings, saves and mods in
+  the game's own folder. An install that already has them in
+  AppData\Local\dinotale or ~/.config/dinotale keeps using that.
+- Command-line options: `--rom <file>` picks the ROM, `--play` skips the
+  launcher, and most settings can be set (`--aspect expand`,
+  `--fullscreen`, `--screen-filter crt`, any setting with `--set`), for
+  that run or saved with `--save-settings`. `--help` lists them.
 - Lossless Scaling frame generation: a Vulkan correctness fix (from
   BattleTanx: Global Assault Recompiled), so it doesn't rely on the graphics
   driver accepting empty shader inputs. The generated frames are the same.
