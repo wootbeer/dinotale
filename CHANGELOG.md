@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- 4-1's treehouses: the row of blue blocks no longer rocks and bobs against
+  itself and the wall as the camera moves (issue #28). The zoomed-out
+  treehouse put each block on whole pixels at its own moment.
 - Portable by default: a new install keeps its settings, saves and mods in
   the game's own folder. An install that already has them in
   AppData\Local\dinotale or ~/.config/dinotale keeps using that.

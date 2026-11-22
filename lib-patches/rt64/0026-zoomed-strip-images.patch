@@ -1,0 +1,35 @@
+diff --git a/src/gbi/rt64_gbi_s2dex.cpp b/src/gbi/rt64_gbi_s2dex.cpp
+--- a/src/gbi/rt64_gbi_s2dex.cpp
++++ b/src/gbi/rt64_gbi_s2dex.cpp
+@@ -768,9 +768,16 @@
+                 // camera follows a jump (rounded, the hills stepped a pixel at a time). A scaled one (1-1's cardboard
+                 // clouds, 16 rows drawn 15.55 pixels tall) has both edges rounded: at a fraction of a pixel its rows
+                 // land on different pixels as it moves, and it wobbled.
+-                const float qx0 = std::round(x0);
+-                const float qx1 = qx0 + std::round(x1 - x0);
+-                const bool unscaledY = std::fabs(std::fabs(y1 - y0) - (o.imageH - 2.0f * shrinkT)) < 0.01f;
++                //
++                // A zoomed scene (4-1's treehouses, drawn at 70%) keeps every edge where the game puts it: each image's
++                // scaled position has its own fraction of a pixel, so rounded, the blocks in a row stepped a pixel at
++                // different times as the camera moved and seemed to rock against each other and the wall behind them.
++                // Strips of one image still share their edges exactly. Only clearly scaled images: the fence (scale
++                // 1.003) and the cardboard clouds (3%) keep the rounding that calmed them.
++                const bool zoomed = (std::fabs(stepS - 1.0f) > 0.05f) && (std::fabs(stepT - 1.0f) > 0.05f);
++                const float qx0 = zoomed ? x0 : std::round(x0);
++                const float qx1 = zoomed ? x1 : (qx0 + std::round(x1 - x0));
++                const bool unscaledY = zoomed || (std::fabs(std::fabs(y1 - y0) - (o.imageH - 2.0f * shrinkT)) < 0.01f);
+                 const float qy0 = unscaledY ? y0 : std::round(y0);
+                 const float qy1 = unscaledY ? y1 : std::round(y1);
+                 if ((qx1 <= qx0) || (qy1 <= qy0)) {
+@@ -799,9 +806,9 @@
+                     quad.tc[i][1] = ts[i];
+                 }
+ 
+-                const int32_t qulx = int32_t(qx0) * 4;
++                const int32_t qulx = int32_t(std::floor(qx0)) * 4;
+                 const int32_t quly = int32_t(std::floor(qy0)) * 4;
+-                const int32_t qlrx = int32_t(qx1) * 4;
++                const int32_t qlrx = int32_t(std::ceil(qx1)) * 4;
+                 const int32_t qlry = int32_t(std::ceil(qy1)) * 4;
+ 
+                 // The rectangle's own texture coordinates only bound the texels it samples: the whole image.

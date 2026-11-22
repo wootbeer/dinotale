@@ -143,15 +143,38 @@ layer's x 0 and the game has art there, so the cover blacked it out.
 x 0, the level-start case the cover is for. (Expand still shows black in the
 extra strip left of a level's or area's start: no art there, issue #26.)
 
-## Open: 4-1's blue blocks (issue #28)
+## Round 56: 4-1's blue blocks rock and bob (issue #28)
 
-**Report:** in 4-1's treehouses (the long row near the end) the blue blocks
-wiggle as Yoshi walks and vanish at the edge of the 4:3 area in Expand.
+**Report:** in 4-1's treehouses the row of blue blocks rocks back and forth,
+bobs, and seems to clip into its neighbours (the reporter's guess: a rotation
+or wobble timer running on the block actor).
 
-**From the reporter's clip:** the blocks move in whole N64 pixels (4.25 and
-8.5 px per frame at 1080p) while the wall behind moves in quarter pixels (3.25,
-6.75): the same sprite-vs-background mismatch as #16, parked with it. The
-rightmost block vanishes when its centre passes about x = 368 (320 + 48) in the
+**Measured** on the reporter's 60 fps clip, frame by frame: with the camera
+still the blocks don't move at all, and their edges keep the same angle in
+every frame (no rotation). What changes while the camera moves is the spacing:
+neighbouring blocks move a whole N64 pixel at different times (gaps of 170,
+175, 170, 174 px at 1080p in one frame, 170, 175, 175, 173 in the next).
+
+**Cause:** the blocks are 64x32 images drawn in two 32-row strips with
+G_OBJRM_SHRINKSIZE, so `rt64/0021` puts them on whole pixels (Round 43). The
+treehouse draws everything zoomed out, so each block's scaled position has its
+own fraction of a pixel and each rounds at its own moment; vertically they
+rounded too while the wall behind moves in quarter pixels. At normal scale
+objects share the camera's fraction and round together, which is why it shows
+so much more here.
+
+**Fix** (`rt64/0026`): strip images drawn more than 5% away from their own
+size on both axes (the treehouse zoom) keep the edges the game gives them.
+Strips of one image share their edges exactly, so no seams (checked at 3x).
+Measured in the treehouse at 1280x720 while scrolling: before, the gap between
+two blocks jumped between 300 and 303 px and each moved in 3 px steps; after,
+they move smoothly and the gap stays within a pixel. 1-1's fence (scale 1.003),
+cardboard clouds (3%) and hills (unscaled) are below the threshold and
+unchanged; the other scaled strip images are menu and intro screens.
+
+## Open: 4-1's blue blocks vanish at the 4:3 edge (issue #28)
+
+**From the reporter's first clip:** the rightmost block vanishes when its centre passes about x = 368 (320 + 48) in the
 320-wide view's coordinates, before the wider view's edge (~373).
 
 **Not yet found:** the check. Not the shared test (func_800591EC, already
