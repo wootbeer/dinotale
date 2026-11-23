@@ -24,6 +24,7 @@
 
 #include "recomp.h"
 #include "librecomp/sections.h"
+#include "dinotale_restart.h"
 
 namespace {
     struct GameFunc {
@@ -71,9 +72,14 @@ namespace {
     // On quit, librecomp frees rdram while the game's threads (never joined)
     // can still be running; their next access faults. While the game runs,
     // the whole 512 MB KSEG0 window is mapped, so a fault inside it can only
-    // be that -- exit quietly instead of reporting a crash.
+    // be that -- exit quietly instead of reporting a crash (and if Restart
+    // was chosen, start the game again first: src/main/restart.cpp).
     bool is_shutdown_fault(bool has_access, uintptr_t access) {
-        return has_access && in_rdram(access) && (access - (uintptr_t)rdram_base) < 0x20000000ull;
+        if (has_access && in_rdram(access) && (access - (uintptr_t)rdram_base) < 0x20000000ull) {
+            dinotale::restart::relaunch_if_requested();
+            return true;
+        }
+        return false;
     }
 
     void report(FILE* out, const char* what, uintptr_t pc, uintptr_t module_base, const char* module_name, const char* thread_name,

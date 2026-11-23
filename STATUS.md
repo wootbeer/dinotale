@@ -6,6 +6,22 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 58: Restart button
+
+**Request:** the Restart button Sin and Punishment Recompiled has.
+
+**Ported:** `RecompFrontend/0006` (snprecomp's 0023, applies unchanged) adds
+the header button between Quit and Close, a confirmation once the game has
+started, and a Restart choice in the quit prompt. `src/main/restart.cpp` sets
+the callback: it quits as Quit does and, right before the process ends (the
+end of main, or a fault while shutting down in the crash handler), starts the
+game again with the same command line in the same folder (CreateProcessW on
+Windows, posix_spawn on Linux). On Linux it starts the exe by its real path:
+through /proc/self/exe the new process was called "exe".
+
+**Checked:** from in game, Restart, confirm: the old process ended and a new
+DinoTale started with the same arguments (--play) at the title screen.
+
 ## Round 57: Cheats and Hacks tabs
 
 **Request:** a Cheats tab with the game's secrets so they don't have to be

@@ -34,6 +34,7 @@
 #include "recompui/program_config.h"
 #include "recompui/renderer.h"
 #include "recompui/config.h"
+#include "dinotale_restart.h"
 #include "dinotale_command_line.h"
 #include "util/file.h"
 
@@ -527,6 +528,8 @@ int main(int argc, char** argv) {
     // recompui's own default launcher menu is used, so there's no
     // register_launcher_init_callback call here.
 
+    dinotale::restart::install(argc, argv);
+
     recomp::start({
         .argc = int(runtime_argv.size()),
         .argv = runtime_argv.data(),
@@ -550,6 +553,7 @@ int main(int argc, char** argv) {
     // returns, so running static destructors/atexit handlers underneath
     // them can crash on quit -- exit directly instead (same approach as
     // other N64Recomp projects' main()).
+    dinotale::restart::relaunch_if_requested();
     fflush(stdout);
     fflush(stderr);
     std::_Exit(EXIT_SUCCESS);

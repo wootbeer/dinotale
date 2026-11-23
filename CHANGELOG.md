@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- A Restart button in the menu's header, between Quit and Close (and a
+  Restart choice when quitting): the game closes and starts again, with the
+  same command line. Handy after a setting that takes effect on the next
+  start. From Sin and Punishment Recompiled.
 - Settings > Cheats: Black and White Yoshi always there to pick, any Yoshi
   colour in any mode (Practice included), infinite health, any course on
   each page, every Trial course open.
