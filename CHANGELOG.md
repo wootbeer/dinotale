@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.9
 
 - A Restart button in the menu's header, between Quit and Close (and a
   Restart choice when quitting): the game closes and starts again, with the
@@ -11,7 +11,7 @@
   each page, every Trial course open.
 - Settings > Hacks: GameShark codes to switch on, and Custom Codes for your
   own, with a GameShark Button for 88/89 codes.
-- 4-1's treehouses: the row of blue blocks no longer rocks and bobs against
+- Jungle Hut's treehouses (page 4): the blue blocks no longer rocks and bobs against
   itself and the wall as the camera moves (issue #28). The zoomed-out
   treehouse put each block on whole pixels at its own moment.
 - Portable by default: a new install keeps its settings, saves and mods in
