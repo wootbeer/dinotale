@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Settings > Cheats: Black and White Yoshi always there to pick, any Yoshi
+  colour in any mode (Practice included), infinite health, any course on
+  each page, every Trial course open.
+- Settings > Hacks: GameShark codes to switch on, and Custom Codes for your
+  own, with a GameShark Button for 88/89 codes.
 - 4-1's treehouses: the row of blue blocks no longer rocks and bobs against
   itself and the wall as the camera moves (issue #28). The zoomed-out
   treehouse put each block on whole pixels at its own moment.

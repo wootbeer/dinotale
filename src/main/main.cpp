@@ -63,6 +63,8 @@ void register_dinotale_overlays();
 void dinotale_add_display_options(recomp::config::Config &config);
 // frame_generation_config.cpp: Settings > Graphics > Frame Generation (Lossless Scaling).
 void dinotale_add_frame_generation_options(recomp::config::Config &graphics);
+// cheats.cpp: Settings > Cheats and Settings > Hacks (GameShark codes).
+void dinotale_add_cheat_tabs();
 void dinotale_update_display_options();
 
 // rom_archive.cpp: the game's ROM from a .zip or .7z, or nothing.
@@ -464,6 +466,7 @@ int main(int argc, char** argv) {
     dinotale_add_frame_generation_options(graphics_tab);
     recompui::config::create_controls_tab();
     recompui::config::create_sound_tab();
+    dinotale_add_cheat_tabs();
     recompui::config::create_mods_tab();
     recompui::config::finalize();
 

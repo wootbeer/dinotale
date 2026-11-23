@@ -6,6 +6,40 @@ stand; this file is for finding out why something is the way it is.
 
 # Log
 
+## Round 57: Cheats and Hacks tabs
+
+**Request:** a Cheats tab with the game's secrets so they don't have to be
+earned or typed in, and a Hacks tab for GameShark codes.
+
+**Engine** (`src/main/cheats.cpp`): codes are applied once per presented frame
+on the game thread, from the hook before the framebuffer swap in
+func_80071974 (the one the UI pump already uses). Types 80/A0, 81/A1, 88/89
+(on the GameShark Button), D0-D3 conditions and 50 serial codes; DE, EE, F0,
+F1 and FF need nothing. Addresses go through the same byte (^3) and halfword
+(^2) swizzle as N64Recomp's MEM_B/MEM_H. Writes inside the game's own code
+(0x80000400-0x80082000) are dropped: the recompiled code doesn't run from
+N64 memory, so code-patching cheats (infinite eggs, infinite flutter, the
+all-Yoshi infinite health at 8102B780, walk through enemies, longer tongue)
+can't work. Custom Codes lists those when they're typed in.
+
+**Checked in game:**
+- 0x800F8DF7 is a bitmask of the Yoshis still around: 0x3F on a new game.
+  Setting 0xC0 as well put White and Black Yoshi on the Select Yoshi screen.
+  The Black and White Yoshi cheat ORs the two bits in, so it doesn't bring
+  back lost Yoshis the way Infinite Lives (0xFF) does.
+- Health bytes 0x800F8DB7 + 4n: 8 is a full flower.
+- 0x800F8DB3 is the current Yoshi (green, red, yellow, dark blue, light blue,
+  pink, white, black); written in a level the Yoshi changes on the spot, which
+  is what Yoshi Colour does in Practice (the Trial-mode trick works because
+  Practice keeps whatever is there).
+- All Fruit (880F89D3 001E) on the GameShark Button filled the fruit frame.
+
+**Not in the game:** the pause code "hold L, A, B, A, C-Up, Left"
+(invincibility, from a fan cheat list). The only function in the game that
+tests a button combination is the crash screen's (Fault_WaitButtonCombo), and
+pausing in 1-1 and entering the code changed nothing in the game's state.
+Purple Yoshi was cut before release. Infinite Health stands in for the first.
+
 ## Round 55: portable by default, and command-line options
 
 **Request:** make portable mode the default, leaving installs that aren't

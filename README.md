@@ -18,6 +18,7 @@ included:** you need your own copy of the game.
 - Screen filters: CRT, scanlines, LCD, and the xBR, xBRZ and HQ2x upscalers.
 - Keyboard and controller support with remappable controls.
 - Saves and sound.
+- Cheats and GameShark codes, in the settings.
 
 ## Download and play
 
@@ -96,6 +97,30 @@ with DinoTale). Then set Frame Generation to **Lossless Scaling** and restart:
 it runs on the Vulkan graphics API, which it switches to. Multiplier sets 2x,
 3x or 4x the game's frame rate; Performance mode is lighter on the GPU. It
 adds about one game frame of input delay. Windows and Linux.
+
+## Cheats and GameShark codes
+
+**Settings > Cheats** has the game's secrets without earning them, and a few
+helpers:
+
+- **Black and White Yoshi:** both are always there to pick (normally you find
+  their eggs in 2-1 and 3-2). They join on the next Select Yoshi screen.
+- **Yoshi Colour:** play as any of the eight Yoshis, in any mode, Practice
+  included.
+- **Infinite Health**, **Choose Any Course** (any course on each Story page),
+  **Open All Trial Courses** (saved with your progress, so they stay open).
+
+**Settings > Hacks** has GameShark codes from the usual code lists to switch
+on, and **Custom Codes** for your own: type them as written, for example
+`800F895F 0063; 810F8994 0100`. Codes are applied every frame, as a GameShark
+does; 88 and 89 codes are applied when you press **GameShark Button**. Codes
+that change the game's own code (most "infinite eggs" or "walk through
+enemies" codes) can't work in a recompiled game and are skipped.
+
+The pause code "hold L, then A, B, A, C-Up, Left" for invincibility and
+"collect every coin for Purple Yoshi" from some cheat lists aren't in the
+game: nothing in it checks for that button sequence, and Purple Yoshi was cut
+before release. Infinite Health covers the first.
 
 ## Reporting issues
 

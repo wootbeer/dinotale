@@ -28,11 +28,12 @@ text = "unload_overlays((int32_t)MEM_W(0x10, ctx->r29), (uint32_t)(ctx->r7 - ctx
 # frame. Both paths into 0x80071A18 pass through the hook. The pump may use
 # a0-a2 and the stack (restored before it returns), so they're saved here;
 # at this point only s-registers are live and a0 is set in the jal's delay
-# slot.
+# slot. The cheat and GameShark codes (src/main/cheats.cpp) are applied here
+# too, once per frame like a GameShark.
 [[patches.hook]]
 func = "func_80071974"
 before_vram = 0x80071A18
-text = "{ gpr a0 = ctx->r4, a1 = ctx->r5, a2 = ctx->r6; recomp_run_ui_callbacks(rdram, ctx); ctx->r4 = a0; ctx->r5 = a1; ctx->r6 = a2; }"
+text = "{ gpr a0 = ctx->r4, a1 = ctx->r5, a2 = ctx->r6; recomp_run_ui_callbacks(rdram, ctx); dinotale_cheats_frame(rdram); ctx->r4 = a0; ctx->r5 = a1; ctx->r6 = a2; }"
 
 # Loads into $zero (`lw $zero, off(reg)`): a read whose result is thrown
 # away, which N64Recomp emits as the invalid C `0 = MEM_W(...)`. With no

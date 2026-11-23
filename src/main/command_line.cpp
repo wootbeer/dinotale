@@ -1,7 +1,7 @@
 // Command-line options (DinoTale --help lists them) and portable mode by
 // default.
 //
-// Settings: any option on the General, Graphics and Sound tabs can be set
+// Settings: any option on the General, Graphics, Sound, Cheats and Hacks tabs can be set
 // with --set <option>=<value>, and the common ones have their own names
 // (--aspect expand, --fullscreen, ...). They're applied after the saved
 // settings load, the way Apply applies them, and are used for that run only:
@@ -49,7 +49,7 @@
 
 namespace {
     // The tabs whose options the command line can set (the Controls tab holds bindings).
-    const std::vector<std::string> setting_tabs = { "general", "graphics", "sound" };
+    const std::vector<std::string> setting_tabs = { "general", "graphics", "sound", "cheats", "hacks" };
 
     // Short names for common settings: --<name> <value> is --set <option>=<value>.
     struct Alias {
@@ -100,7 +100,7 @@ namespace {
             printf("  %-30s %s\n", flag.c_str(), alias.help);
         }
         printf(
-            "  --set <option>=<value>         Any setting on the General, Graphics and Sound tabs, by its name\n"
+            "  --set <option>=<value>         Any setting on the General, Graphics, Sound, Cheats and Hacks tabs, by its name\n"
             "                                 in the settings files (--list-settings shows them and their values).\n"
             "  --save-settings                Save the settings given on the command line.\n"
             "\n"

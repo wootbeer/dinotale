@@ -20,6 +20,9 @@ void dinotale_crash_note_rdram(uint8_t* rdram);
 // lib/RecompFrontend/recompui/src/api/ui_api_events.cpp
 void recomp_run_ui_callbacks(uint8_t* rdram, recomp_context* ctx);
 
+// src/main/cheats.cpp
+void dinotale_cheats_frame(uint8_t* rdram);
+
 // src/game/widescreen.cpp
 int32_t dinotale_bg_view_width(uint8_t* rdram, int32_t width);
 uint32_t dinotale_camera_half_width_bits(void);
